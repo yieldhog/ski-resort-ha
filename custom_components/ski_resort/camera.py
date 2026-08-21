@@ -21,7 +21,7 @@ from . import SkiResortConfigEntry
 from .const import CONF_WEBCAM_URL
 from .coordinator import SkiResortDataUpdateCoordinator
 from .entity import SkiResortEntity
-from .helpers import resolve_webcam_url
+from .helpers import image_to_jpeg, resolve_webcam_url
 
 _LOGGER = logging.getLogger(__name__)
 _TIMEOUT = 20.0
@@ -77,9 +77,17 @@ class SkiResortWebcam(SkiResortEntity, Camera):
         except (httpx.HTTPError, httpx.InvalidURL) as err:
             _LOGGER.debug("Webcam fetch failed for %s: %s", self._url, err)
             return self._cache  # serve the last good frame if we have one
-        content_type = resp.headers.get("content-type")
+        content_type = (resp.headers.get("content-type") or "").split(";")[0].strip()
+        data = resp.content
+        # HA's live view is an MJPEG stream; browsers only render JPEG frames in
+        # it, so transcode anything else (e.g. OpenSnow's WebP) off the loop.
+        if "jpeg" not in content_type and "jpg" not in content_type:
+            jpeg = await self.hass.async_add_executor_job(image_to_jpeg, data)
+            if jpeg is not None:
+                data = jpeg
+                content_type = "image/jpeg"
         if content_type:
             self._attr_content_type = content_type
-        self._cache = resp.content
+        self._cache = data
         self._cache_at = now
         return self._cache

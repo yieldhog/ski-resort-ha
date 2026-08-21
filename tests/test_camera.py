@@ -56,6 +56,24 @@ async def test_camera_image_success(hass: HomeAssistant):
     assert cam.content_type == "image/jpeg"
 
 
+async def test_camera_image_webp_transcoded_to_jpeg(hass: HomeAssistant):
+    """A WebP frame (e.g. OpenSnow) is transcoded to JPEG for the live view."""
+    from io import BytesIO
+
+    from PIL import Image
+
+    buf = BytesIO()
+    Image.new("RGB", (8, 8), (5, 90, 140)).save(buf, format="WEBP")
+    entry, _ = await setup_area(hass, options={CONF_WEBCAM_URL: URL})
+    cam = SkiResortWebcam(entry.runtime_data, URL)
+    cam.hass = hass
+    with patch("custom_components.ski_resort.camera.get_async_client",
+               return_value=_fake_client(_resp(buf.getvalue(), "image/webp"))):
+        data = await cam.async_camera_image()
+    assert data is not None and data[:2] == b"\xff\xd8"  # JPEG SOI marker
+    assert cam.content_type == "image/jpeg"
+
+
 async def test_camera_image_cached(hass: HomeAssistant):
     entry, _ = await setup_area(hass, options={CONF_WEBCAM_URL: URL})
     cam = SkiResortWebcam(entry.runtime_data, URL)

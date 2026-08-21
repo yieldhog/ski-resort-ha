@@ -3,6 +3,17 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0-beta.2] - 2026-08-21
+
+- **Fixed the webcam live view showing a broken image.** Home Assistant renders
+  a still-camera's live preview as an MJPEG stream, and browsers only decode
+  **JPEG** frames inside it — so WebP webcams (e.g. OpenSnow's `.webp` frames)
+  appeared broken in the more-info view even though "Download snapshot" saved a
+  correct picture. The camera now transcodes any non-JPEG frame to JPEG (off the
+  event loop) before serving it, so the live preview works. Uses Pillow, which
+  ships with Home Assistant; if it were ever unavailable the original bytes are
+  served unchanged.
+
 ## [0.6.0-beta.1] - 2026-08-21
 
 **First public beta.** Consolidates everything below into the first tagged
