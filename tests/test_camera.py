@@ -76,3 +76,18 @@ async def test_camera_image_failure_returns_none(hass: HomeAssistant):
     with patch("custom_components.ski_resort.camera.get_async_client",
                return_value=_fake_client(side_effect=httpx.ConnectError("boom"))):
         assert await cam.async_camera_image() is None
+
+
+async def test_opensnow_page_url_converted(hass: HomeAssistant):
+    """Pasting an OpenSnow cam page URL yields the direct-image camera."""
+    entry, _ = await setup_area(
+        hass, options={CONF_WEBCAM_URL: "https://opensnow.com/location/vail/cams/3380"}
+    )
+    registry = er.async_get(hass)
+    eid = registry.async_get_entity_id("camera", DOMAIN, f"{entry.entry_id}_webcam")
+    assert eid is not None
+    # The entity fetches the converted direct image URL.
+    cam = SkiResortWebcam(
+        entry.runtime_data, "https://cams.opensnow.com/latest/3380/720.webp"
+    )
+    assert cam._url.endswith("/latest/3380/720.webp")

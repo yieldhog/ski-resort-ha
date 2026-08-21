@@ -60,3 +60,13 @@ def test_sum_next_hours():
     assert sum_next_hours([], [], 24) is None
     assert sum_next_hours([1], [None, None], 24) is None
     assert sum_next_hours([1, 2, 3], [1.0, 2.0, 3.0], 2) == 3.0
+
+
+def test_resolve_webcam_url():
+    from custom_components.ski_resort.helpers import resolve_webcam_url
+
+    assert resolve_webcam_url("https://opensnow.com/location/vail/cams/3380") == \
+        "https://cams.opensnow.com/latest/3380/720.webp"
+    # direct URLs pass through unchanged
+    assert resolve_webcam_url("https://cam.example/x.jpg") == "https://cam.example/x.jpg"
+    assert resolve_webcam_url("") == ""

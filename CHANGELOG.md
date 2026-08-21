@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-08-21
+
+- **OpenSnow cams made easy.** The webcam option now accepts an OpenSnow cam
+  *page* URL (e.g. `opensnow.com/location/vail/cams/3380`) and converts it
+  automatically to the direct latest-frame image
+  (`cams.opensnow.com/latest/3380/720.webp`) — which serves cleanly over HTTP
+  and updates in place. Direct image URLs still work unchanged.
+
 ## [0.5.0] - 2026-08-21
 
 - **Webcam camera (optional).** Add a resort webcam by pasting a direct

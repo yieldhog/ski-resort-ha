@@ -21,6 +21,7 @@ from . import SkiResortConfigEntry
 from .const import CONF_WEBCAM_URL
 from .coordinator import SkiResortDataUpdateCoordinator
 from .entity import SkiResortEntity
+from .helpers import resolve_webcam_url
 
 _LOGGER = logging.getLogger(__name__)
 _TIMEOUT = 20.0
@@ -35,7 +36,7 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the resort webcam camera when a URL is configured."""
-    url = (entry.options.get(CONF_WEBCAM_URL) or "").strip()
+    url = resolve_webcam_url((entry.options.get(CONF_WEBCAM_URL) or "").strip())
     if url:
         async_add_entities([SkiResortWebcam(entry.runtime_data, url)])
 

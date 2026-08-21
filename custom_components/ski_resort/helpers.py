@@ -95,6 +95,23 @@ def parse_snow_date(value: object) -> date | None:
         return None
 
 
+_OPENSNOW_CAM_RE = re.compile(r"opensnow\.com/location/[^/]+/cams/(\d+)", re.IGNORECASE)
+
+
+def resolve_webcam_url(url: str) -> str:
+    """Normalize a configured webcam URL to a direct still-image URL.
+
+    A convenience for OpenSnow: pasting a cam *page* URL like
+    ``https://opensnow.com/location/vail/cams/3380`` is rewritten to that cam's
+    direct latest-frame image (``https://cams.opensnow.com/latest/3380/720.webp``).
+    Any other URL is returned unchanged.
+    """
+    match = _OPENSNOW_CAM_RE.search(url or "")
+    if match:
+        return f"https://cams.opensnow.com/latest/{match.group(1)}/720.webp"
+    return url
+
+
 def sum_next_hours(times: list, values: list, hours: int) -> float | None:
     """Sum the next ``hours`` hourly values starting at the current hour.
 
