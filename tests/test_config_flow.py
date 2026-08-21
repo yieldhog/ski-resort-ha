@@ -183,3 +183,26 @@ async def test_options_invalid_liftie_url(hass: HomeAssistant):
     )
     assert result["type"] == FlowResultType.FORM
     assert result["errors"] == {CONF_LIFTIE_BASE_URL: "invalid_url"}
+
+
+async def test_options_invalid_webcam_url(hass: HomeAssistant):
+    """A webcam URL without a scheme is rejected, keyed to the webcam field."""
+    from custom_components.ski_resort.const import CONF_WEBCAM_URL
+
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="vailid",
+        data={"id": "vailid", "name": "Vail", "area": AREA},
+        options={CONF_UNITS: UNIT_IMPERIAL},
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_SCAN_INTERVAL_MINUTES: 60,
+            CONF_UNITS: UNIT_IMPERIAL,
+            CONF_WEBCAM_URL: "cam.example/live.jpg",  # no scheme
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {CONF_WEBCAM_URL: "invalid_url"}

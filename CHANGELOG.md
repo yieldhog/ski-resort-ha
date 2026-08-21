@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-08-21
+
+- **Webcam camera (optional).** Add a resort webcam by pasting a direct
+  still-image URL in the options — it appears as a `camera` entity on the resort
+  device. Fetches follow redirects and swallow errors (a broken URL never
+  raises), a short cache keeps polling gentle, and the last good frame is served
+  if a refresh fails. The URL is validated up front. Fully optional and
+  independent of the polled data.
+
 ## [0.4.2] - 2026-08-21
 
 Error-handling hardening pass.

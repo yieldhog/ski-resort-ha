@@ -3,3 +3,7 @@
 pytest-homeassistant-custom-component
 # Coverage, used to enforce 100% config-flow coverage in CI.
 pytest-cov
+# The camera platform pulls in Home Assistant's camera component, which requires
+# PyTurboJPEG. Only the class import is needed here (still images don't touch the
+# native libturbojpeg), but the package must be present for the import to succeed.
+PyTurboJPEG

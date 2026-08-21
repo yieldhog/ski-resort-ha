@@ -72,6 +72,11 @@
       "trail_map": {
         "default": "mdi:map"
       }
+    },
+    "camera": {
+      "webcam": {
+        "default": "mdi:cctv"
+      }
     }
   }
 }

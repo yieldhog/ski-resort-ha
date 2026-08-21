@@ -41,6 +41,7 @@ CONF_RAPIDAPI_KEY = "rapidapi_key"  # optional; unlocks RapidAPI snow + skiapi l
 CONF_FORECAST_RESORT = "forecast_resort"  # RapidAPI snow-forecast resort name
 CONF_LIFTIE_BASE_URL = "liftie_base_url"  # self-hosted Liftie base URL
 CONF_LIFT_SLUG = "lift_slug"  # Liftie/skiapi slug (auto from crosswalk)
+CONF_WEBCAM_URL = "webcam_url"  # optional direct still-image webcam URL
 
 # Config-flow (search) keys
 CONF_QUERY = "query"

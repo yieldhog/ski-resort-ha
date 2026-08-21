@@ -43,6 +43,7 @@ from .const import (
     CONF_SCAN_INTERVAL_MINUTES,
     CONF_SKI_AREA,
     CONF_UNITS,
+    CONF_WEBCAM_URL,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEFAULT_UNITS,
     DOMAIN,
@@ -168,9 +169,10 @@ class SkiResortOptionsFlow(OptionsFlow):
         """Show and persist the options form."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            base_url = (user_input.get(CONF_LIFTIE_BASE_URL) or "").strip()
-            if base_url and not base_url.startswith(("http://", "https://")):
-                errors[CONF_LIFTIE_BASE_URL] = "invalid_url"
+            for field in (CONF_LIFTIE_BASE_URL, CONF_WEBCAM_URL):
+                value = (user_input.get(field) or "").strip()
+                if value and not value.startswith(("http://", "https://")):
+                    errors[field] = "invalid_url"
             if not errors:
                 # Drop blank optional strings so unset stays unset.
                 cleaned = {
@@ -205,6 +207,9 @@ class SkiResortOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_FORECAST_RESORT,
                     default=opts.get(CONF_FORECAST_RESORT, ""),
+                ): str,
+                vol.Optional(
+                    CONF_WEBCAM_URL, default=opts.get(CONF_WEBCAM_URL, "")
                 ): str,
             }
         )

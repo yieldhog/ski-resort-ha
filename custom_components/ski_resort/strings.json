@@ -41,12 +41,14 @@
           "lift_slug": "Lift slug (Liftie/skiapi)",
           "liftie_base_url": "Self-hosted Liftie base URL (optional)",
           "rapidapi_key": "RapidAPI key (optional)",
-          "forecast_resort": "RapidAPI snow-forecast resort name (optional)"
+          "forecast_resort": "RapidAPI snow-forecast resort name (optional)",
+          "webcam_url": "Webcam image URL (optional)"
         },
         "data_description": {
           "liftie_base_url": "The base URL of your self-hosted Liftie instance (its host and port). When set, lift status comes from Liftie instead of RapidAPI — completely free.",
           "rapidapi_key": "Enables skiapi lift status and the RapidAPI snow-forecast. Leave blank to stay fully free.",
-          "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek."
+          "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek.",
+          "webcam_url": "A direct link to a resort webcam still image (JPG/PNG). Shown as a camera; some resorts block hotlinking."
         }
       }
     },
@@ -122,6 +124,11 @@
       },
       "trail_map": {
         "name": "Trail map"
+      }
+    },
+    "camera": {
+      "webcam": {
+        "name": "Webcam"
       }
     }
   }
