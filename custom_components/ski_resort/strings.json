@@ -2,71 +2,112 @@
   "config": {
     "step": {
       "user": {
-        "title": "Add a ski resort",
-        "description": "Enter your RapidAPI key and a resort name from the Ski Resort Forecast API (for example, Vail or Beaver-Creek).",
+        "title": "Find a ski resort",
+        "description": "Search OpenSkiMap for a resort by name. No API key needed — weather comes from the free Open-Meteo service.",
         "data": {
-          "api_key": "RapidAPI key",
-          "resort": "Resort name",
-          "name": "Display name (optional)",
-          "units": "Units"
+          "query": "Resort name",
+          "country": "Country (optional)"
         },
         "data_description": {
-          "resort": "The resort as the forecast API spells it, e.g. Vail, Beaver-Creek, Val-dIsere.",
-          "units": "Imperial (inches) or metric (centimetres)."
+          "query": "Type part of the resort name, e.g. Vail, Whistler, Chamonix."
         }
       },
-      "reauth_confirm": {
-        "title": "Update RapidAPI key",
-        "description": "The stored key stopped working for {resort}. Enter a current RapidAPI key.",
+      "select": {
+        "title": "Choose the ski area",
+        "description": "Pick the matching OpenSkiMap ski area. Its lift slug is filled in automatically when known.",
         "data": {
-          "api_key": "RapidAPI key"
+          "ski_area": "Ski area",
+          "name": "Display name (optional)"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to reach the Ski Resort Forecast API. Check your network and try again.",
-      "invalid_auth": "The RapidAPI key was rejected. Check the key and that it is subscribed to the Ski Resort Forecast API.",
-      "unknown_resort": "That resort name wasn't found. Check the spelling the forecast API uses (hyphens for spaces).",
+      "no_results": "No ski areas matched that name. Try fewer letters or clear the country filter.",
       "unknown": "Unexpected error."
     },
     "abort": {
-      "already_configured": "This resort is already configured.",
-      "reauth_successful": "Re-authentication was successful."
+      "already_configured": "This ski area is already configured."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Ski resort options",
-        "description": "Tune how often data is polled and enable optional lift status.",
+        "description": "Weather is free via Open-Meteo. Optionally add live lift status (self-hosted Liftie or a RapidAPI key) and a RapidAPI snow-forecast.",
         "data": {
           "scan_interval_minutes": "Update interval (minutes)",
           "units": "Units",
-          "elevation": "Forecast elevation",
-          "lifts_enabled": "Enable lift status (needs the Ski Resorts and Conditions API)",
-          "lift_slug": "Lift-status resort slug"
+          "lift_slug": "Lift slug (Liftie/skiapi)",
+          "liftie_base_url": "Self-hosted Liftie base URL (optional)",
+          "rapidapi_key": "RapidAPI key (optional)",
+          "forecast_resort": "RapidAPI snow-forecast resort name (optional)"
         },
         "data_description": {
-          "elevation": "Which mountain elevation the forecast summary describes: top, mid, or bot.",
-          "lift_slug": "The resort slug used by the Ski Resorts and Conditions (skiapi) product, e.g. vail."
+          "liftie_base_url": "e.g. http://homeassistant.local:3000 — if set, lift status comes from your Liftie instance (free).",
+          "rapidapi_key": "Enables skiapi lift status and the RapidAPI snow-forecast. Leave blank to stay fully free.",
+          "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek."
         }
       }
     }
   },
   "entity": {
     "sensor": {
-      "fresh_snow": { "name": "Fresh snowfall" },
-      "top_snow_depth": { "name": "Top snow depth" },
-      "base_snow_depth": { "name": "Base snow depth" },
-      "last_snow_date": { "name": "Last snowfall date" },
-      "forecast_3day": { "name": "3-day forecast" },
-      "lifts_open": { "name": "Lifts open" },
-      "lifts_total": { "name": "Lifts total" },
-      "lifts_open_percent": { "name": "Lifts open percentage" }
+      "fresh_snow": {
+        "name": "Fresh snowfall (24h)"
+      },
+      "snow_depth": {
+        "name": "Snow depth"
+      },
+      "freezing_level": {
+        "name": "Freezing level"
+      },
+      "temperature": {
+        "name": "Temperature"
+      },
+      "wind_speed": {
+        "name": "Wind speed"
+      },
+      "lift_count": {
+        "name": "Lifts"
+      },
+      "run_count": {
+        "name": "Runs"
+      },
+      "vertical_drop": {
+        "name": "Vertical drop"
+      },
+      "summit_elevation": {
+        "name": "Summit elevation"
+      },
+      "base_elevation": {
+        "name": "Base elevation"
+      },
+      "lifts_open": {
+        "name": "Lifts open"
+      },
+      "lifts_open_percent": {
+        "name": "Lifts open percentage"
+      },
+      "reported_summit_depth": {
+        "name": "Reported summit depth"
+      },
+      "reported_base_depth": {
+        "name": "Reported base depth"
+      },
+      "reported_fresh_snow": {
+        "name": "Reported fresh snow"
+      },
+      "last_snow_date": {
+        "name": "Last snowfall date"
+      }
     },
     "binary_sensor": {
-      "powder_day": { "name": "Powder day" },
-      "resort_open": { "name": "Resort open" }
+      "powder_day": {
+        "name": "Powder day"
+      },
+      "resort_open": {
+        "name": "Resort open"
+      }
     }
   }
 }

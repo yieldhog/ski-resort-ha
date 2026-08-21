@@ -1,8 +1,8 @@
-"""Tests for the RapidAPI client's error mapping and retry behaviour."""
+"""Tests for the shared HTTP helper and source clients."""
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
@@ -10,107 +10,95 @@ import pytest
 from custom_components.ski_resort.api import (
     SkiResortApiError,
     SkiResortAuthError,
-    SkiResortClient,
     SkiResortConnectionError,
+    async_liftie,
+    async_open_meteo,
+    async_skiapi,
 )
 
 
-def _client_returning(hass, response: httpx.Response) -> SkiResortClient:
-    """Build a client whose underlying httpx GET returns a fixed response."""
-    client = SkiResortClient(hass, "key")
-    client._client = AsyncMock()
-    client._client.get = AsyncMock(return_value=response)
-    return client
+def _patch_get(hass, response=None, side_effect=None):
+    """Patch the shared httpx client's get to return a fixed response."""
+    client = AsyncMock()
+    client.get = AsyncMock(return_value=response, side_effect=side_effect)
+    return patch(
+        "custom_components.ski_resort.api.get_async_client", return_value=client
+    ), client
 
 
-async def test_snow_conditions_parses_json(hass):
-    """A 200 with a JSON body returns the parsed dict."""
-    client = _client_returning(
-        hass, httpx.Response(200, json={"freshSnowfall": "5in"})
-    )
-    data = await client.async_get_snow_conditions("Vail", "i")
-    assert data == {"freshSnowfall": "5in"}
+async def test_open_meteo_ok(hass):
+    patcher, _ = _patch_get(hass, httpx.Response(200, json={"current": {"t": 1}}))
+    with patcher:
+        assert await async_open_meteo(hass, 39.6, -106.3) == {"current": {"t": 1}}
 
 
-async def test_non_dict_body_becomes_empty_dict(hass):
-    """A JSON list where a dict is expected degrades to {} (never crashes)."""
-    client = _client_returning(hass, httpx.Response(200, json=["unexpected"]))
-    assert await client.async_get_snow_conditions("Vail", "i") == {}
+async def test_non_dict_body_is_empty(hass):
+    patcher, _ = _patch_get(hass, httpx.Response(200, json=[1, 2]))
+    with patcher:
+        assert await async_open_meteo(hass, 1, 2) == {}
 
 
-async def test_401_maps_to_auth_error(hass):
-    """A rejected key raises the dedicated auth error."""
-    client = _client_returning(hass, httpx.Response(401))
-    with pytest.raises(SkiResortAuthError):
-        await client.async_get_forecast("Vail", "i", "top")
+async def test_auth_error(hass):
+    patcher, _ = _patch_get(hass, httpx.Response(403))
+    with patcher, pytest.raises(SkiResortAuthError):
+        await async_skiapi(hass, "key", "vail")
 
 
-async def test_404_maps_to_api_error(hass):
-    """An unknown resort (404) is an API error carrying the status code."""
-    client = _client_returning(hass, httpx.Response(404, json={"message": "no"}))
-    with pytest.raises(SkiResortApiError) as exc:
-        await client.async_get_snow_conditions("Nowhere", "i")
+async def test_api_error_status(hass):
+    patcher, _ = _patch_get(hass, httpx.Response(404))
+    with patcher, pytest.raises(SkiResortApiError) as exc:
+        await async_liftie(hass, "http://liftie.local", "nope")
     assert exc.value.status_code == 404
-    assert isinstance(exc.value, SkiResortConnectionError)
 
 
-async def test_transport_error_maps_to_connection_error(hass):
-    """An httpx transport failure is a plain connection error."""
-    client = SkiResortClient(hass, "key")
-    client._client = AsyncMock()
-    client._client.get = AsyncMock(side_effect=httpx.ConnectError("boom"))
-    with pytest.raises(SkiResortConnectionError) as exc:
-        await client.async_get_lift_status("vail")
+async def test_transport_error(hass):
+    patcher, _ = _patch_get(hass, side_effect=httpx.ConnectError("boom"))
+    with patcher, pytest.raises(SkiResortConnectionError) as exc:
+        await async_open_meteo(hass, 1, 2)
     assert not isinstance(exc.value, SkiResortApiError)
 
 
-async def test_empty_body_is_none(hass):
-    """A 204 / empty body is treated as no data (None)."""
-    client = _client_returning(hass, httpx.Response(204))
-    assert await client.async_get_snow_conditions("Vail", "i") == {}
-
-
-async def test_transient_500_is_retried_then_succeeds(hass, monkeypatch):
-    """A transient 5xx is retried; a good response on a later attempt wins."""
-    import custom_components.ski_resort.api as api_mod
-
-    monkeypatch.setattr(api_mod, "_RETRY_BACKOFF", 0)  # no real delay in tests
-    client = SkiResortClient(hass, "key")
-    client._client = AsyncMock()
-    client._client.get = AsyncMock(
-        side_effect=[
-            httpx.Response(500),
-            httpx.Response(200, json={"topSnowDepth": "80in"}),
-        ]
-    )
-    data = await client.async_get_snow_conditions("Vail", "i")
-    assert data == {"topSnowDepth": "80in"}
-    assert client._client.get.call_count == 2
-
-
-async def test_persistent_500_raises_after_retries(hass, monkeypatch):
-    """A 5xx that never clears eventually raises an API error."""
+async def test_retry_then_success(hass, monkeypatch):
     import custom_components.ski_resort.api as api_mod
 
     monkeypatch.setattr(api_mod, "_RETRY_BACKOFF", 0)
-    client = _client_returning(hass, httpx.Response(503))
-    with pytest.raises(SkiResortApiError) as exc:
-        await client.async_get_forecast("Vail", "i", "top")
-    assert exc.value.status_code == 503
-
-
-async def test_bad_json_raises_api_error(hass):
-    """A 200 with an unparseable body is an API error, not silent None."""
-    client = _client_returning(
-        hass, httpx.Response(200, content=b"not json", headers={})
+    patcher, client = _patch_get(hass)
+    client.get = AsyncMock(
+        side_effect=[httpx.Response(500), httpx.Response(200, json={"ok": 1})]
     )
-    with pytest.raises(SkiResortApiError):
-        await client.async_get_snow_conditions("Vail", "i")
+    with patcher:
+        assert await async_open_meteo(hass, 1, 2) == {"ok": 1}
+    assert client.get.call_count == 2
 
 
-async def test_validate_resort_delegates_to_snow(hass):
-    """async_validate_resort returns the snow-conditions dict on success."""
-    client = _client_returning(
-        hass, httpx.Response(200, json={"topSnowDepth": "80in"})
-    )
-    assert await client.async_validate_resort("Vail", "i") == {"topSnowDepth": "80in"}
+async def test_empty_body_none(hass):
+    patcher, _ = _patch_get(hass, httpx.Response(204))
+    with patcher:
+        assert await async_open_meteo(hass, 1, 2) == {}
+
+
+async def test_bad_json(hass):
+    patcher, _ = _patch_get(hass, httpx.Response(200, content=b"xx"))
+    with patcher, pytest.raises(SkiResortApiError):
+        await async_open_meteo(hass, 1, 2)
+
+
+async def test_liftie_strips_trailing_slash(hass):
+    patcher, client = _patch_get(hass, httpx.Response(200, json={"lifts": {}}))
+    with patcher:
+        await async_liftie(hass, "http://liftie.local/", "vail")
+    called_url = client.get.call_args.args[0]
+    assert called_url == "http://liftie.local/api/resort/vail"
+
+
+async def test_skiapi_and_rapidapi_snow_shapes(hass):
+    """skiapi and rapidapi-snow return their JSON dicts (cover both clients)."""
+    from custom_components.ski_resort.api import async_rapidapi_snow
+
+    patcher, _ = _patch_get(hass, httpx.Response(200, json={"data": {"lifts": {}}}))
+    with patcher:
+        assert await async_skiapi(hass, "k", "vail") == {"data": {"lifts": {}}}
+    patcher2, _ = _patch_get(hass, httpx.Response(200, json={"topSnowDepth": "80in"}))
+    with patcher2:
+        got = await async_rapidapi_snow(hass, "k", "Vail", "i")
+    assert got == {"topSnowDepth": "80in"}

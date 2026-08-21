@@ -1,4 +1,4 @@
-"""Diagnostics for the Ski Resort Forecast integration."""
+"""Diagnostics for the Ski Resort integration."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
 from . import SkiResortConfigEntry
-from .const import CONF_API_KEY
+from .const import CONF_LIFTIE_BASE_URL, CONF_RAPIDAPI_KEY
 
-# The RapidAPI key is the only secret in the entry.
-TO_REDACT = {CONF_API_KEY}
+# The RapidAPI key is secret; a self-hosted Liftie URL may reveal an internal host.
+TO_REDACT = {CONF_RAPIDAPI_KEY, CONF_LIFTIE_BASE_URL}
 
 
 async def async_get_config_entry_diagnostics(
@@ -21,8 +21,8 @@ async def async_get_config_entry_diagnostics(
     coordinator = entry.runtime_data
     return {
         "entry": {
-            "data": async_redact_data(dict(entry.data), TO_REDACT),
-            "options": dict(entry.options),
+            "data": dict(entry.data),
+            "options": async_redact_data(dict(entry.options), TO_REDACT),
         },
         "data": coordinator.data,
     }

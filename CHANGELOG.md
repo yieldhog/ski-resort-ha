@@ -3,6 +3,28 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-08-21
+
+Re-anchored the integration on OpenSkiMap and open data. **Breaking:** the
+config model changed from a RapidAPI resort name to an OpenSkiMap ski area;
+re-add resorts after upgrading.
+
+- **OpenSkiMap search flow** — pick from ~6,000 bundled ski areas by name (+
+  country filter); resorts are keyed by their canonical OpenSkiMap id. No API
+  key required.
+- **Free weather** — a per-resort `weather` entity plus fresh-snow (24h), snow
+  depth, freezing level, temperature, and wind sensors, all from **Open-Meteo**
+  (keyless) at the resort's coordinates.
+- **Terrain metadata** (offline, from OpenSkiMap) — lifts (by type), runs (by
+  difficulty), vertical drop, summit/base elevation, snowmaking.
+- **Optional live lift status** — self-hosted **Liftie** or RapidAPI skiapi,
+  with the Liftie slug **auto-mapped** from a bundled crosswalk; *% open* uses
+  OpenSkiMap's authoritative lift total.
+- **Optional RapidAPI snow-forecast** — reported base/summit depth, fresh snow,
+  last snowfall date.
+- Bundled OpenSkiMap index + Liftie crosswalk with a regeneration script;
+  data-source attributions (ODbL/CC-BY/BSD) included.
+
 ## [0.1.0] - 2026-08-21
 
 Initial release.

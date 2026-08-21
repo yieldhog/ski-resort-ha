@@ -1,4 +1,4 @@
-"""Base entity for the Ski Resort Forecast integration."""
+"""Base entity for the Ski Resort integration."""
 
 from __future__ import annotations
 
@@ -7,31 +7,37 @@ from typing import Any
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_NAME, CONF_RESORT, DATA_INFO, DOMAIN, MANUFACTURER
+from .const import (
+    ATTRIBUTION,
+    CONF_NAME,
+    DOMAIN,
+    MANUFACTURER,
+    OPENSKIMAP_PERMALINK,
+)
 from .coordinator import SkiResortDataUpdateCoordinator
 
 
 class SkiResortEntity(CoordinatorEntity[SkiResortDataUpdateCoordinator]):
-    """Base entity tied to a single resort (one HA device per resort)."""
+    """Base entity for one OpenSkiMap ski area (one HA device per area)."""
 
     _attr_has_entity_name = True
+    _attr_attribution = ATTRIBUTION
 
     def __init__(self, coordinator: SkiResortDataUpdateCoordinator) -> None:
-        """Initialize the entity and its device info."""
+        """Initialize device info from the OpenSkiMap area record."""
         super().__init__(coordinator)
+        area = coordinator.area
         entry = coordinator.entry
-        info = (coordinator.data or {}).get(DATA_INFO, {})
-        friendly = entry.data.get(CONF_NAME) or entry.data[CONF_RESORT]
-        region = info.get("region") or info.get("country")
+        region = area.get("region") or area.get("country")
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name=friendly,
+            name=entry.data.get(CONF_NAME) or area.get("name"),
             manufacturer=MANUFACTURER,
-            model=region or "Ski resort",
-            configuration_url=info.get("url"),
+            model=region or "Ski area",
+            configuration_url=OPENSKIMAP_PERMALINK.format(id=area.get("id")),
         )
 
     @property
-    def _info(self) -> dict[str, Any]:
-        """The resort's ``basicInfo`` block (name/region/coords/elevations)."""
-        return (self.coordinator.data or {}).get(DATA_INFO, {})
+    def area(self) -> dict[str, Any]:
+        """The bundled OpenSkiMap area record."""
+        return self.coordinator.area

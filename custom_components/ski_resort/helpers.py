@@ -1,32 +1,81 @@
-"""Pure helper functions for the Ski Resort Forecast integration.
-
-No Home Assistant imports here, so these stay trivially unit-testable. They
-absorb the quirks of the RapidAPI payloads: measurements arrive as strings with
-a unit suffix ("83in", "210 cm"), sometimes ``null``; dates arrive as
-human-readable "25 Jan 2026".
-"""
+"""Pure helpers (no Home Assistant imports) for the Ski Resort integration."""
 
 from __future__ import annotations
 
 import re
 from datetime import date, datetime
 
-# First signed decimal number anywhere in a string ("83in" -> 83, "-1.5cm" ->
-# -1.5). Anchored to a digit run so unit letters and stray spaces are ignored.
 _NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")
+
+# WMO weather code -> Home Assistant condition string. Open-Meteo returns WMO
+# codes; HA weather cards understand this fixed vocabulary.
+_WMO_TO_CONDITION = {
+    0: "sunny",
+    1: "partlycloudy",
+    2: "partlycloudy",
+    3: "cloudy",
+    45: "fog",
+    48: "fog",
+    51: "rainy",
+    53: "rainy",
+    55: "rainy",
+    56: "snowy-rainy",
+    57: "snowy-rainy",
+    61: "rainy",
+    63: "rainy",
+    65: "pouring",
+    66: "snowy-rainy",
+    67: "snowy-rainy",
+    71: "snowy",
+    73: "snowy",
+    75: "snowy",
+    77: "snowy",
+    80: "rainy",
+    81: "rainy",
+    82: "pouring",
+    85: "snowy",
+    86: "snowy",
+    95: "lightning",
+    96: "lightning-rainy",
+    99: "lightning-rainy",
+}
+
+_CM_PER_INCH = 2.54
+_M_PER_FOOT = 0.3048
+
+
+def condition_from_wmo(code: object) -> str | None:
+    """Map a WMO weather code to a Home Assistant condition, or ``None``."""
+    if not isinstance(code, (int, float)) or isinstance(code, bool):
+        return None
+    return _WMO_TO_CONDITION.get(int(code))
+
+
+def cm_to_display(value: float | None, imperial: bool) -> float | None:
+    """Convert a centimetre value to inches when imperial; round sensibly."""
+    if value is None:
+        return None
+    return round(value / _CM_PER_INCH, 1) if imperial else round(value, 1)
+
+
+def m_to_depth_display(value: float | None, imperial: bool) -> float | None:
+    """Convert a metre snow-depth to inches or centimetres for display."""
+    if value is None:
+        return None
+    cm = value * 100.0
+    return round(cm / _CM_PER_INCH, 1) if imperial else round(cm, 1)
+
+
+def m_to_elev_display(value: float | None, imperial: bool) -> float | None:
+    """Convert a metre elevation to feet (imperial) or metres."""
+    if value is None:
+        return None
+    return round(value / _M_PER_FOOT) if imperial else round(value)
 
 
 def parse_measure(value: object) -> float | None:
-    """Parse a snow measurement to a float, or ``None`` when absent/unusable.
-
-    The forecast API returns depths/snowfall as unit-suffixed strings ("83in",
-    "210 cm") and ``null`` when a value is unavailable. Numbers pass straight
-    through; anything without a parseable number becomes ``None`` so a missing
-    reading shows as *unavailable* rather than a misleading ``0``.
-    """
-    if value is None:
-        return None
-    if isinstance(value, bool):  # bool is an int subclass; never a measurement
+    """Parse a RapidAPI unit-suffixed measurement ("83in") to a float."""
+    if value is None or isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
         return float(value)
@@ -37,44 +86,28 @@ def parse_measure(value: object) -> float | None:
 
 
 def parse_snow_date(value: object) -> date | None:
-    """Parse a "25 Jan 2026" style date to a ``date``, or ``None``.
-
-    Returns ``None`` for empty/``null``/unparseable input so a
-    ``device_class: date`` sensor reports *unavailable* instead of erroring.
-    """
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    if not text:
+    """Parse a "25 Jan 2026" RapidAPI date to a ``date``, or ``None``."""
+    if not isinstance(value, str) or not value.strip():
         return None
     try:
-        return datetime.strptime(text, "%d %b %Y").date()
+        return datetime.strptime(value.strip(), "%d %b %Y").date()
     except ValueError:
         return None
 
 
-def slugify_resort(name: str) -> str:
-    """Best-effort default lift-status slug from a forecast resort name.
+def sum_next_hours(times: list, values: list, hours: int) -> float | None:
+    """Sum the next ``hours`` hourly values starting at the current hour.
 
-    The conditions (skiapi) product keys resorts by a lowercase, hyphenated
-    slug ("Beaver Creek" -> "beaver-creek"). This is only a starting suggestion
-    in the options flow; the user can override it.
+    Open-Meteo returns aligned ``time``/value arrays; this sums the first
+    ``hours`` valid numbers (a simple, timezone-agnostic "next 24h" total).
+    Returns ``None`` if there is nothing usable.
     """
-    slug = re.sub(r"[^a-z0-9]+", "-", name.strip().lower())
-    return slug.strip("-")
-
-
-def trend_of(current: float | None, previous: float | None) -> str | None:
-    """Classify a change between two readings as up/down/stable.
-
-    ``None`` when either side is missing (no basis for comparison). Equal
-    readings are ``stable``; this is deliberately exact — the caller decides
-    any tolerance before calling.
-    """
-    if current is None or previous is None:
+    if not isinstance(values, list) or not values:
         return None
-    if current > previous:
-        return "up"
-    if current < previous:
-        return "down"
-    return "stable"
+    total = 0.0
+    seen = False
+    for value in values[:hours]:
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            total += value
+            seen = True
+    return round(total, 2) if seen else None

@@ -1,63 +1,78 @@
-"""Constants for the Ski Resort Forecast integration."""
+"""Constants for the Ski Resort integration.
+
+The integration is anchored on OpenSkiMap ski-area IDs (the canonical open
+identifier). A bundled, distilled OpenSkiMap index supplies each resort's
+identity, geography, and terrain metadata offline; weather/snow comes from the
+free Open-Meteo API (no key); live lift status is optional (self-hosted Liftie
+or the RapidAPI skiapi product, auto-mapped from a bundled Liftie crosswalk).
+"""
 
 from __future__ import annotations
 
 DOMAIN = "ski_resort"
-MANUFACTURER = "Ski Resort Forecast"
+MANUFACTURER = "OpenSkiMap"
 
-# --- RapidAPI hosts ----------------------------------------------------------
-# One RapidAPI key unlocks both products; the ``X-RapidAPI-Host`` header selects
-# which one a request targets. The forecast product is the core data source
-# (snow depth + fresh snow + 3/5-day forecast); the conditions product is an
-# optional add-on for live lift counts and is gated by an options toggle.
-FORECAST_HOST = "ski-resort-forecast.p.rapidapi.com"
-CONDITIONS_HOST = "ski-resorts-and-conditions.p.rapidapi.com"
+# --- Hosts -----------------------------------------------------------------
+OPEN_METEO_HOST = "api.open-meteo.com"
+CONDITIONS_HOST = "ski-resorts-and-conditions.p.rapidapi.com"  # skiapi (= Liftie)
+FORECAST_HOST = "ski-resort-forecast.p.rapidapi.com"  # optional RapidAPI snow
 
-# --- Config keys (entry.data) ------------------------------------------------
-CONF_API_KEY = "api_key"
-CONF_RESORT = "resort"  # forecast-API resort name, e.g. "Vail"
-CONF_NAME = "name"  # friendly display name for the device
+# Attribution (data licenses). Surfaced on entities.
+ATTRIBUTION = (
+    "Ski-area data © OpenSkiMap (OpenStreetMap contributors & Skimap.org, ODbL); "
+    "weather © Open-Meteo (CC-BY 4.0); lift status © Liftie (BSD)"
+)
+OPENSKIMAP_PERMALINK = "https://openskimap.org/?obj={id}"
 
-# --- Option keys (entry.options) ---------------------------------------------
-CONF_UNITS = "units"  # "imperial" | "metric"
-CONF_ELEVATION = "elevation"  # "top" | "mid" | "bot"
+# --- Config entry data keys ------------------------------------------------
+CONF_AREA = "area"  # the bundled OpenSkiMap record snapshot (dict)
+CONF_OPENSKIMAP_ID = "id"
+CONF_NAME = "name"
+
+# --- Options keys ----------------------------------------------------------
+CONF_UNITS = "units"
 CONF_SCAN_INTERVAL_MINUTES = "scan_interval_minutes"
-# Lift status hits a second RapidAPI product, so it gets a toggle that gates the
-# fetch (same convention as this project's forecast core: only pay for a call
-# when the feature is on).
-CONF_ENABLE_LIFTS = "lifts_enabled"
-CONF_LIFT_SLUG = "lift_slug"  # skiapi resort slug, e.g. "vail"
+CONF_RAPIDAPI_KEY = "rapidapi_key"  # optional; unlocks RapidAPI snow + skiapi lifts
+CONF_FORECAST_RESORT = "forecast_resort"  # RapidAPI snow-forecast resort name
+CONF_LIFTIE_BASE_URL = "liftie_base_url"  # self-hosted Liftie base URL
+CONF_LIFT_SLUG = "lift_slug"  # Liftie/skiapi slug (auto from crosswalk)
 
-# --- Units -------------------------------------------------------------------
-UNIT_IMPERIAL = "imperial"
+# Config-flow (search) keys
+CONF_QUERY = "query"
+CONF_COUNTRY = "country"
+CONF_SKI_AREA = "ski_area"
+
+# --- Units -----------------------------------------------------------------
 UNIT_METRIC = "metric"
-UNITS = [UNIT_IMPERIAL, UNIT_METRIC]
-# Query-param value + display unit for each system.
-UNIT_QUERY = {UNIT_IMPERIAL: "i", UNIT_METRIC: "m"}
-LENGTH_UNIT = {UNIT_IMPERIAL: "in", UNIT_METRIC: "cm"}
-
-# --- Elevations --------------------------------------------------------------
-ELEVATIONS = ["top", "mid", "bot"]
-
-# --- Defaults ----------------------------------------------------------------
+UNIT_IMPERIAL = "imperial"
+UNITS = [UNIT_METRIC, UNIT_IMPERIAL]
 DEFAULT_UNITS = UNIT_IMPERIAL
-DEFAULT_ELEVATION = "top"
-# Snow reports refresh a few times a day; the source data does not move faster
-# than that and RapidAPI free tiers are quota-limited, so poll conservatively.
-DEFAULT_SCAN_INTERVAL_MINUTES = 360
-MIN_SCAN_INTERVAL_MINUTES = 30
-DEFAULT_ENABLE_LIFTS = False
+# Bundled data is SI (m, cm). Display conversion factors.
+LENGTH_UNIT = {UNIT_METRIC: "cm", UNIT_IMPERIAL: "in"}
+DEPTH_UNIT = {UNIT_METRIC: "cm", UNIT_IMPERIAL: "in"}
+ELEV_UNIT = {UNIT_METRIC: "m", UNIT_IMPERIAL: "ft"}
 
-# --- Coordinator data-bundle keys --------------------------------------------
-DATA_SNOW = "snow"  # parsed snowConditions
-DATA_FORECAST = "forecast"  # raw forecast payload
-DATA_LIFTS = "lifts"  # parsed lift stats, or None when disabled/unavailable
-DATA_INFO = "info"  # basicInfo (name/region/coords/elevations)
+# --- Defaults --------------------------------------------------------------
+DEFAULT_SCAN_INTERVAL_MINUTES = 180
+MIN_SCAN_INTERVAL_MINUTES = 60
 
-# Snow-condition sub-keys (normalized in the coordinator).
-SNOW_FRESH = "fresh"
-SNOW_TOP = "top_depth"
-SNOW_BASE = "base_depth"
-SNOW_LAST_DATE = "last_snow_date"
-SNOW_TOP_TREND = "top_trend"  # "up" | "down" | "stable"
-SNOW_TOP_CHANGE = "top_change"  # numeric delta vs previous poll
+# --- Coordinator data bundle keys ------------------------------------------
+DATA_WEATHER = "weather"
+DATA_SNOW = "snow"  # RapidAPI snow-forecast (optional)
+DATA_LIFTS = "lifts"
+DATA_AREA = "area"
+
+# Weather bundle sub-keys
+WX_TEMP = "temperature"
+WX_WIND = "wind_speed"
+WX_GUST = "wind_gust"
+WX_HUMIDITY = "humidity"
+WX_CONDITION = "condition"
+WX_FRESH_SNOW = "fresh_snow"  # next-24h snowfall
+WX_SNOW_DEPTH = "snow_depth"
+WX_FREEZING_LEVEL = "freezing_level"
+WX_DAILY = "daily"  # HA daily forecast list
+WX_HOURLY = "hourly"  # HA hourly forecast list
+
+# Difficulty ordering used for terrain sensors.
+DIFFICULTIES = ["novice", "easy", "intermediate", "advanced", "expert", "freeride"]

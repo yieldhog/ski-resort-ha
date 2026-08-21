@@ -1,15 +1,11 @@
-"""Data update coordinator for the Ski Resort Forecast integration.
+"""Data update coordinator for the Ski Resort integration.
 
-One coordinator per config entry (one resort). Each refresh fetches snow
-conditions and the forecast concurrently — plus lift status when that option is
-on — shapes them into a stable bundle, and tags the top-depth trend against the
-previous poll (no database; the same in-memory approach as sycamore-ha).
-
-Resilience: a single section failing (RapidAPI 500s one endpoint, or the
-optional lift product isn't subscribed) degrades that section to ``None``
-rather than blanking the whole resort. Auth failures propagate as
-``ConfigEntryAuthFailed`` to trigger reauth; a total wipe-out raises
-``UpdateFailed`` so entities go unavailable honestly.
+One coordinator per config entry (one OpenSkiMap ski area). Each refresh always
+fetches free Open-Meteo weather/snow for the area's coordinates, and optionally
+live lift status (self-hosted Liftie or RapidAPI skiapi) and a RapidAPI
+snow-forecast summary. Optional sources degrade to ``None`` on failure — only a
+total wipe-out (even Open-Meteo failing) raises ``UpdateFailed``. Nothing here
+requires an API key, so there is no reauth flow.
 """
 
 from __future__ import annotations
@@ -19,39 +15,42 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
-    SkiResortAuthError,
-    SkiResortClient,
     SkiResortConnectionError,
+    async_liftie,
+    async_open_meteo,
+    async_rapidapi_snow,
+    async_skiapi,
 )
 from .const import (
-    CONF_ELEVATION,
-    CONF_ENABLE_LIFTS,
+    CONF_AREA,
+    CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
-    CONF_RESORT,
+    CONF_LIFTIE_BASE_URL,
+    CONF_RAPIDAPI_KEY,
     CONF_SCAN_INTERVAL_MINUTES,
     CONF_UNITS,
-    DATA_FORECAST,
-    DATA_INFO,
+    DATA_AREA,
     DATA_LIFTS,
     DATA_SNOW,
-    DEFAULT_ELEVATION,
-    DEFAULT_ENABLE_LIFTS,
+    DATA_WEATHER,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEFAULT_UNITS,
     DOMAIN,
-    SNOW_BASE,
-    SNOW_FRESH,
-    SNOW_LAST_DATE,
-    SNOW_TOP,
-    SNOW_TOP_CHANGE,
-    SNOW_TOP_TREND,
-    UNIT_QUERY,
+    UNIT_IMPERIAL,
+    WX_CONDITION,
+    WX_DAILY,
+    WX_FREEZING_LEVEL,
+    WX_FRESH_SNOW,
+    WX_GUST,
+    WX_HUMIDITY,
+    WX_SNOW_DEPTH,
+    WX_TEMP,
+    WX_WIND,
 )
-from .helpers import parse_measure, parse_snow_date, trend_of
+from .helpers import condition_from_wmo, parse_measure, parse_snow_date, sum_next_hours
 
 if TYPE_CHECKING:
     from . import SkiResortConfigEntry
@@ -60,167 +59,164 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Fetch and shape one resort's data on a fixed interval."""
+    """Fetch and shape one ski area's weather, snow, and lift data."""
 
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        entry: SkiResortConfigEntry,
-        client: SkiResortClient,
-    ) -> None:
-        """Initialize the coordinator from the entry's options."""
+    def __init__(self, hass: HomeAssistant, entry: SkiResortConfigEntry) -> None:
+        """Initialize the coordinator from the entry's area + options."""
         self.entry = entry
-        self._client = client
-        # Remembered across refreshes to compute the top-depth trend without a
-        # database, mirroring sycamore-ha's grade-trend approach.
-        self._prev_top: float | None = None
-
+        self.area: dict[str, Any] = entry.data[CONF_AREA]
+        self._prev_depth: float | None = None
         minutes = entry.options.get(
             CONF_SCAN_INTERVAL_MINUTES, DEFAULT_SCAN_INTERVAL_MINUTES
         )
         super().__init__(
             hass,
             _LOGGER,
-            name=f"{DOMAIN}_{entry.data[CONF_RESORT]}",
+            name=f"{DOMAIN}_{self.area.get('name')}",
             update_interval=timedelta(minutes=minutes),
         )
 
     @property
-    def resort(self) -> str:
-        """The forecast-API resort name for this entry."""
-        return self.entry.data[CONF_RESORT]
-
-    @property
-    def _units(self) -> str:
-        return self.entry.options.get(CONF_UNITS, DEFAULT_UNITS)
+    def imperial(self) -> bool:
+        """Whether display units are imperial."""
+        return self.entry.options.get(CONF_UNITS, DEFAULT_UNITS) == UNIT_IMPERIAL
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Fetch snow + forecast (+ lifts), returning the shaped bundle."""
-        units_q = UNIT_QUERY.get(self._units, "i")
-        elevation = self.entry.options.get(CONF_ELEVATION, DEFAULT_ELEVATION)
-        lifts_on = self.entry.options.get(CONF_ENABLE_LIFTS, DEFAULT_ENABLE_LIFTS)
-        slug = self.entry.options.get(CONF_LIFT_SLUG) or ""
+        opts = self.entry.options
+        lat, lon = self.area.get("lat"), self.area.get("lon")
 
-        snow_raw = await self._safe_section(
-            "snowConditions",
-            self._client.async_get_snow_conditions(self.resort, units_q),
-        )
-        forecast_raw = await self._safe_section(
-            "forecast",
-            self._client.async_get_forecast(self.resort, units_q, elevation),
-        )
-        lifts_raw: dict[str, Any] | None = None
-        if lifts_on and slug:
-            lifts_raw = await self._safe_section(
-                "liftStatus", self._client.async_get_lift_status(slug)
+        weather = None
+        if lat is not None and lon is not None:
+            weather = await self._safe("open-meteo", self._fetch_weather(lat, lon))
+
+        snow = None
+        key = opts.get(CONF_RAPIDAPI_KEY)
+        forecast_resort = opts.get(CONF_FORECAST_RESORT)
+        if key and forecast_resort:
+            snow = await self._safe(
+                "rapidapi-snow", self._fetch_rapidapi_snow(key, forecast_resort)
             )
 
-        # If every section we tried failed (and none was an auth error, which
-        # would already have raised), surface it rather than publishing a blank
-        # resort that reads as "0 in of snow everywhere".
-        attempted = [snow_raw, forecast_raw]
-        if lifts_on and slug:
-            attempted.append(lifts_raw)
-        if all(section is None for section in attempted):
-            raise UpdateFailed(f"No data returned for {self.resort}")
+        lifts = await self._safe("lifts", self._fetch_lifts())
+
+        if weather is None and snow is None and lifts is None:
+            raise UpdateFailed(f"No data available for {self.area.get('name')}")
 
         return {
-            DATA_SNOW: self._shape_snow(snow_raw or {}),
-            DATA_FORECAST: self._shape_forecast(forecast_raw or {}),
-            DATA_INFO: self._extract_info(forecast_raw or {}),
-            DATA_LIFTS: self._shape_lifts(lifts_raw) if lifts_raw else None,
+            DATA_WEATHER: weather,
+            DATA_SNOW: snow,
+            DATA_LIFTS: lifts,
+            DATA_AREA: self.area,
         }
 
-    async def _safe_section(self, label: str, coro: Any) -> dict[str, Any] | None:
-        """Await one section, degrading non-auth failures to ``None``.
-
-        Auth errors re-raise as ``ConfigEntryAuthFailed`` (a bad key affects
-        every section, so there's nothing to degrade to). Any other error is
-        logged and swallowed so the remaining sections still publish.
-        """
+    async def _safe(self, label: str, coro: Any) -> Any:
+        """Await a section, degrading any failure to ``None`` (optional sources)."""
         try:
             return await coro
-        except SkiResortAuthError as err:
-            raise ConfigEntryAuthFailed(str(err)) from err
         except SkiResortConnectionError as err:
-            _LOGGER.warning("%s: %s section unavailable: %s", self.resort, label, err)
+            _LOGGER.warning(
+                "%s: %s unavailable: %s", self.area.get("name"), label, err
+            )
             return None
 
-    def _shape_snow(self, raw: dict[str, Any]) -> dict[str, Any]:
-        """Normalize snowConditions and tag the top-depth trend.
+    # --- Weather (Open-Meteo) ---------------------------------------------
+    async def _fetch_weather(self, lat: float, lon: float) -> dict[str, Any]:
+        raw = await async_open_meteo(self.hass, lat, lon)
+        current = raw.get("current") or {}
+        hourly = raw.get("hourly") or {}
+        daily = raw.get("daily") or {}
 
-        Fresh snowfall of ``null`` means "none fell", so it floors to ``0.0``;
-        depths of ``null`` stay ``None`` (unknown), so a missing base reading
-        shows as unavailable rather than a bogus zero.
-        """
-        fresh = parse_measure(raw.get("freshSnowfall"))
-        top = parse_measure(raw.get("topSnowDepth"))
-        base = parse_measure(raw.get("botSnowDepth"))
-
-        trend = trend_of(top, self._prev_top)
-        change = (
-            round(top - self._prev_top, 2)
-            if top is not None and self._prev_top is not None
-            else None
+        fresh = sum_next_hours(
+            hourly.get("time") or [], hourly.get("snowfall") or [], 24
         )
-        if top is not None:
-            self._prev_top = top
+        depth_series = hourly.get("snow_depth") or []
+        depth = depth_series[0] if depth_series else None
+        fl_series = hourly.get("freezing_level_height") or []
+        freezing = fl_series[0] if fl_series else None
 
         return {
-            SNOW_FRESH: fresh if fresh is not None else 0.0,
-            SNOW_TOP: top,
-            SNOW_BASE: base,
-            SNOW_LAST_DATE: parse_snow_date(raw.get("lastSnowfallDate")),
-            SNOW_TOP_TREND: trend,
-            SNOW_TOP_CHANGE: change,
+            WX_TEMP: current.get("temperature_2m"),
+            WX_WIND: current.get("wind_speed_10m"),
+            WX_GUST: current.get("wind_gusts_10m"),
+            WX_HUMIDITY: current.get("relative_humidity_2m"),
+            WX_CONDITION: condition_from_wmo(current.get("weather_code")),
+            WX_FRESH_SNOW: fresh,  # cm, next 24h
+            WX_SNOW_DEPTH: depth,  # metres
+            WX_FREEZING_LEVEL: freezing,  # metres
+            WX_DAILY: self._shape_daily(daily),
             "raw": raw,
         }
 
     @staticmethod
-    def _shape_forecast(raw: dict[str, Any]) -> dict[str, Any]:
-        """Pull the summary fields, keeping the raw payload for attributes."""
+    def _shape_daily(daily: dict[str, Any]) -> list[dict[str, Any]]:
+        """Build a per-day forecast list (SI units + snowfall_cm)."""
+        times = daily.get("time") or []
+
+        def at(key: str, i: int) -> Any:
+            seq = daily.get(key) or []
+            return seq[i] if i < len(seq) else None
+
+        return [
+            {
+                "datetime": day,
+                "condition": condition_from_wmo(at("weather_code", i)),
+                "temperature": at("temperature_2m_max", i),
+                "templow": at("temperature_2m_min", i),
+                "wind_speed": at("wind_speed_10m_max", i),
+                "precipitation": at("precipitation_sum", i),
+                "snowfall_cm": at("snowfall_sum", i),
+            }
+            for i, day in enumerate(times)
+        ]
+
+    # --- RapidAPI snow-forecast (optional) --------------------------------
+    async def _fetch_rapidapi_snow(self, key: str, resort: str) -> dict[str, Any]:
+        units_q = "i" if self.imperial else "m"
+        raw = await async_rapidapi_snow(self.hass, key, resort, units_q)
         return {
-            "summary3Day": raw.get("summary3Day"),
-            "summary5Day": raw.get("summary5Day"),
-            "forecast5Day": raw.get("forecast5Day"),
+            "fresh": parse_measure(raw.get("freshSnowfall")),
+            "top": parse_measure(raw.get("topSnowDepth")),
+            "base": parse_measure(raw.get("botSnowDepth")),
+            "last_snow_date": parse_snow_date(raw.get("lastSnowfallDate")),
             "raw": raw,
         }
 
-    @staticmethod
-    def _extract_info(forecast_raw: dict[str, Any]) -> dict[str, Any]:
-        """Resort metadata from the forecast payload's ``basicInfo`` block."""
-        info = forecast_raw.get("basicInfo")
-        return info if isinstance(info, dict) else {}
-
-    @staticmethod
-    def _shape_lifts(raw: dict[str, Any]) -> dict[str, Any] | None:
-        """Flatten skiapi's ``data.lifts.stats`` into open/total/percentage.
-
-        Returns ``None`` if the payload lacks the expected shape (e.g. the slug
-        was wrong) so the lift sensors go unavailable instead of reading zero.
-        """
-        data = raw.get("data")
-        if not isinstance(data, dict):
+    # --- Lifts (Liftie or skiapi) -----------------------------------------
+    async def _fetch_lifts(self) -> dict[str, Any] | None:
+        opts = self.entry.options
+        slug = opts.get(CONF_LIFT_SLUG)
+        if not slug:
             return None
-        lifts = data.get("lifts")
-        if not isinstance(lifts, dict):
+        base_url = opts.get(CONF_LIFTIE_BASE_URL)
+        key = opts.get(CONF_RAPIDAPI_KEY)
+        if base_url:
+            raw = await async_liftie(self.hass, base_url, slug)
+            stats = ((raw.get("lifts") or {}).get("stats")) or {}
+            source = "liftie"
+        elif key:
+            raw = await async_skiapi(self.hass, key, slug)
+            stats = (
+                ((raw.get("data") or {}).get("lifts") or {}).get("stats")
+            ) or {}
+            source = "skiapi"
+        else:
             return None
-        stats = lifts.get("stats")
-        if not isinstance(stats, dict):
-            return None
+        return self._shape_lifts(stats, source)
 
-        def _int(key: str) -> int:
+    def _shape_lifts(self, stats: dict[str, Any], source: str) -> dict[str, Any] | None:
+        """Normalize lift stats; total prefers OpenSkiMap's authoritative count."""
+
+        def as_int(key: str) -> int:
             try:
                 return int(stats.get(key) or 0)
             except (TypeError, ValueError):
                 return 0
 
-        counts = {k: _int(k) for k in ("open", "hold", "scheduled", "closed")}
-        total = sum(counts.values())
-        return {
-            **counts,
-            "total": total,
-            "percentage": stats.get("percentage"),
-            "status": lifts.get("status"),
-            "resort_name": data.get("name"),
-        }
+        counts = {k: as_int(k) for k in ("open", "hold", "scheduled", "closed")}
+        if not any(counts.values()) and "open" not in stats:
+            return None
+        reported_total = sum(counts.values())
+        osm_total = self.area.get("lifts") or 0
+        total = osm_total or reported_total
+        pct = round(counts["open"] / total * 100) if total else None
+        return {**counts, "total": total, "percentage": pct, "source": source}
