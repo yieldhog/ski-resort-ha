@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0b4] - 2026-08-21
+
+- **Clearing an optional field in the options now actually clears it.** The
+  options form pre-filled each optional text field (webcam URL, Liftie URL,
+  RapidAPI key, forecast resort, lift slug) with a `default`, which Home
+  Assistant silently re-injected when you emptied the field — so blanking the
+  webcam URL never removed the webcam (the b3 removal logic never saw an empty
+  value). These now use `suggested_value`, so a cleared field stays cleared and
+  the webcam (or any other optional setting) is removed on save.
+
 ## [0.6.0b3] - 2026-08-21
 
 - **Clearing the webcam URL now removes the camera entity.** Previously,

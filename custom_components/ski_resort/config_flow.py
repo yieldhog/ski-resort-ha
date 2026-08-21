@@ -183,6 +183,19 @@ class SkiResortOptionsFlow(OptionsFlow):
                 return self.async_create_entry(data=cleaned)
 
         opts = self.config_entry.options
+
+        def optional(key: str) -> vol.Optional:
+            """An optional text field pre-filled from the current value.
+
+            Uses ``suggested_value`` (not ``default``) so a cleared field stays
+            cleared: the HA frontend omits an emptied optional field, and a
+            ``default`` would silently re-inject the old value — meaning e.g.
+            blanking the webcam URL would never actually remove it.
+            """
+            return vol.Optional(
+                key, description={"suggested_value": opts.get(key) or None}
+            )
+
         schema = vol.Schema(
             {
                 vol.Required(
@@ -194,23 +207,11 @@ class SkiResortOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_UNITS, default=opts.get(CONF_UNITS, DEFAULT_UNITS)
                 ): vol.In(UNITS),
-                vol.Optional(
-                    CONF_LIFT_SLUG, default=opts.get(CONF_LIFT_SLUG, "")
-                ): str,
-                vol.Optional(
-                    CONF_LIFTIE_BASE_URL,
-                    default=opts.get(CONF_LIFTIE_BASE_URL, ""),
-                ): str,
-                vol.Optional(
-                    CONF_RAPIDAPI_KEY, default=opts.get(CONF_RAPIDAPI_KEY, "")
-                ): str,
-                vol.Optional(
-                    CONF_FORECAST_RESORT,
-                    default=opts.get(CONF_FORECAST_RESORT, ""),
-                ): str,
-                vol.Optional(
-                    CONF_WEBCAM_URL, default=opts.get(CONF_WEBCAM_URL, "")
-                ): str,
+                optional(CONF_LIFT_SLUG): str,
+                optional(CONF_LIFTIE_BASE_URL): str,
+                optional(CONF_RAPIDAPI_KEY): str,
+                optional(CONF_FORECAST_RESORT): str,
+                optional(CONF_WEBCAM_URL): str,
             }
         )
         return self.async_show_form(

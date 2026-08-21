@@ -147,6 +147,34 @@ async def test_options_flow(hass: HomeAssistant):
     assert CONF_LIFTIE_BASE_URL not in entry.options  # blank dropped
 
 
+async def test_options_clearing_webcam_removes_it(hass: HomeAssistant):
+    """Clearing the webcam URL drops it from options (frontend omits the field).
+
+    The HA frontend omits an emptied optional field, so ``suggested_value``
+    (not ``default``) must be used — otherwise the old URL is re-injected and
+    the webcam can never be removed.
+    """
+    from custom_components.ski_resort.const import CONF_WEBCAM_URL
+
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="vailid",
+        data={"id": "vailid", "name": "Vail", "area": AREA},
+        options={
+            CONF_UNITS: UNIT_IMPERIAL,
+            CONF_WEBCAM_URL: "https://cams.opensnow.com/latest/3379/720.webp",
+        },
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    # Submit with the webcam field omitted, exactly as the UI does when cleared.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_SCAN_INTERVAL_MINUTES: 180, CONF_UNITS: UNIT_IMPERIAL},
+    )
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert CONF_WEBCAM_URL not in entry.options  # actually removed, not re-injected
+
+
 async def test_select_area_vanished_aborts(hass: HomeAssistant):
     """If the picked area is no longer in the index, the flow aborts cleanly."""
     p1, p2, p3, p4 = _patch_data(area=None)
