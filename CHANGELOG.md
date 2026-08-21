@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0b6] - 2026-08-21
+
+- **Stop retrying on HTTP 429 (rate/quota limit).** RapidAPI's metered plans
+  return `429` once you hit your allowance; retrying that 3× per poll only
+  burned more of the quota and could never succeed. `429` now fails fast with a
+  clear "rate or quota limit reached" message, and the affected source degrades
+  to unavailable for that cycle. Transient server errors (`500/502/503/504`)
+  are still retried.
+
 ## [0.6.0b5] - 2026-08-21
 
 - **Webcam live view: set the stream content-type correctly and warn on

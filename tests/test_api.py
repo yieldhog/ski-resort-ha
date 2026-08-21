@@ -71,6 +71,15 @@ async def test_retry_then_success(hass, monkeypatch):
     assert client.get.call_count == 2
 
 
+async def test_429_not_retried(hass):
+    """A 429 (quota/rate limit) fails immediately without burning extra calls."""
+    patcher, client = _patch_get(hass, httpx.Response(429))
+    with patcher, pytest.raises(SkiResortApiError) as exc:
+        await async_skiapi(hass, "key", "vail")
+    assert exc.value.status_code == 429
+    assert client.get.call_count == 1  # no retry
+
+
 async def test_empty_body_none(hass):
     patcher, _ = _patch_get(hass, httpx.Response(204))
     with patcher:

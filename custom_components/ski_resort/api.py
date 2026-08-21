@@ -36,7 +36,10 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 _TIMEOUT = 20.0
-_RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+# Retry only transient *server* errors. 429 (rate/quota limit) is deliberately
+# excluded: retrying a quota-limited API (e.g. RapidAPI's metered plans) can't
+# succeed and just burns more of the allowance, so we fail fast instead.
+_RETRY_STATUSES = frozenset({500, 502, 503, 504})
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF = 0.5
 
@@ -88,6 +91,12 @@ async def _get_json(
 
         if resp.status_code in (401, 403):
             raise SkiResortAuthError(f"Key rejected ({resp.status_code})")
+        if resp.status_code == 429:
+            # Rate/quota limit — not retried (see _RETRY_STATUSES). Surface a
+            # clear message; the coordinator degrades this source to None.
+            raise SkiResortApiError(
+                f"Rate or quota limit reached (429) at {url}", status_code=429
+            )
         if resp.status_code in _RETRY_STATUSES and attempt < _MAX_ATTEMPTS - 1:
             await asyncio.sleep(_RETRY_BACKOFF * (2**attempt))
             continue
