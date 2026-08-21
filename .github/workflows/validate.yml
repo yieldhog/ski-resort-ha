@@ -28,6 +28,10 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          # 'brands' requires the integration to be listed in home-assistant/brands.
+          # That PR is prepared and pending upstream review; ignore the check until
+          # it merges, then remove this line for full HACS eligibility.
+          ignore: brands
 
   lint:
     name: Ruff
