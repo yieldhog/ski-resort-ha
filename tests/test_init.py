@@ -87,3 +87,36 @@ async def test_info_failure_is_non_fatal(hass: HomeAssistant):
     entry, _ = await setup_area(hass, info_error=SkiResortConnectionError("down"))
     assert entry.state is ConfigEntryState.LOADED
     assert entry.runtime_data.data[DATA_INFO] == {}
+
+
+async def test_auth_error_on_optional_source_degrades(hass: HomeAssistant):
+    """A bad RapidAPI key (auth error) disables lifts, not the whole entry."""
+    from custom_components.ski_resort.api import SkiResortAuthError
+
+    entry, _ = await setup_area(
+        hass,
+        options={CONF_LIFT_SLUG: "vail", CONF_RAPIDAPI_KEY: "bad"},
+        lifts_error=SkiResortAuthError("key rejected"),
+    )
+    assert entry.state is ConfigEntryState.LOADED  # weather still works
+    assert entry.runtime_data.data[DATA_LIFTS] is None
+
+
+async def test_lift_slug_without_source_yields_no_lifts(hass: HomeAssistant):
+    """A slug with no Liftie URL and no key produces no lift data."""
+    entry, _ = await setup_area(hass, options={CONF_LIFT_SLUG: "vail"})
+    assert entry.runtime_data.data[DATA_LIFTS] is None
+
+
+async def test_missing_area_data_errors(hass: HomeAssistant):
+    """An entry lacking the OpenSkiMap area snapshot fails setup with a message."""
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.ski_resort.const import DOMAIN
+
+    entry = MockConfigEntry(domain=DOMAIN, unique_id="oldid",
+                            data={"id": "oldid", "name": "Legacy"})  # no CONF_AREA
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.SETUP_ERROR

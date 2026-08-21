@@ -3,6 +3,26 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.4.2] - 2026-08-21
+
+Error-handling hardening pass.
+
+- **Optional sources never blank the integration.** The coordinator now
+  degrades the *whole* `SkiResortError` hierarchy — including auth errors from a
+  bad RapidAPI key — so a rejected key or a failing optional source disables
+  just that section, never the keyless core.
+- **Malformed-URL safety.** `httpx.InvalidURL` (e.g. a Liftie base URL missing
+  its scheme) is caught and degraded instead of crashing; the options flow also
+  validates the URL up front.
+- **Enrichment can't crash a refresh.** A bad Wikidata date (`ValueError`) is
+  now caught; enrichment stays best-effort.
+- **Resort photo actually loads.** The image entity follows redirects (the
+  Wikidata/Commons URL is a 302) and swallows fetch errors.
+- **Concurrent fetches.** Weather, snow, lifts, and enrichment run in parallel,
+  so one slow source can't hold up or blank the others.
+- **Clear message for legacy entries** (missing the OpenSkiMap snapshot) and a
+  guard if a chosen ski area is no longer in the bundled index.
+
 ## [0.4.1] - 2026-08-21
 
 - Fix hassfest: remove a literal URL from the `liftie_base_url` option

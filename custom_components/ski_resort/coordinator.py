@@ -10,6 +10,7 @@ requires an API key, so there is no reauth flow.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
@@ -19,7 +20,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import (
-    SkiResortConnectionError,
+    SkiResortError,
     async_liftie,
     async_open_meteo,
     async_rapidapi_snow,
@@ -88,26 +89,36 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return self.entry.options.get(CONF_UNITS, DEFAULT_UNITS) == UNIT_IMPERIAL
 
     async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch every section concurrently; each degrades independently.
+
+        Weather, snow, lifts, and (once) enrichment run in parallel so one slow
+        or failing source can't hold up or blank the others. Only a total
+        wipe-out of the live sections raises ``UpdateFailed``.
+        """
         opts = self.entry.options
         lat, lon = self.area.get("lat"), self.area.get("lon")
-
-        weather = None
-        if lat is not None and lon is not None:
-            weather = await self._safe("open-meteo", self._fetch_weather(lat, lon))
-
-        snow = None
         key = opts.get(CONF_RAPIDAPI_KEY)
         forecast_resort = opts.get(CONF_FORECAST_RESORT)
+
+        jobs: dict[str, Any] = {}
+        if lat is not None and lon is not None:
+            jobs[DATA_WEATHER] = self._fetch_weather(lat, lon)
         if key and forecast_resort:
-            snow = await self._safe(
-                "rapidapi-snow", self._fetch_rapidapi_snow(key, forecast_resort)
-            )
-
-        lifts = await self._safe("lifts", self._fetch_lifts())
-
+            jobs[DATA_SNOW] = self._fetch_rapidapi_snow(key, forecast_resort)
+        jobs[DATA_LIFTS] = self._fetch_lifts()
         if self._info is None:
-            self._info = await self._fetch_info()
+            jobs[DATA_INFO] = self._fetch_info()
 
+        names = list(jobs)
+        results = await asyncio.gather(*(self._safe(n, jobs[n]) for n in names))
+        data = dict(zip(names, results, strict=True))
+
+        if DATA_INFO in data:
+            self._info = data[DATA_INFO] or {}
+
+        weather = data.get(DATA_WEATHER)
+        snow = data.get(DATA_SNOW)
+        lifts = data.get(DATA_LIFTS)
         if weather is None and snow is None and lifts is None:
             raise UpdateFailed(f"No data available for {self.area.get('name')}")
 
@@ -120,10 +131,16 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         }
 
     async def _safe(self, label: str, coro: Any) -> Any:
-        """Await a section, degrading any failure to ``None`` (optional sources)."""
+        """Await a section, degrading any client failure to ``None``.
+
+        Catches the whole ``SkiResortError`` hierarchy — including auth errors
+        from an invalid RapidAPI key — because every network source here is
+        optional; the core (Open-Meteo) needs no key, so nothing should ever
+        raise ``ConfigEntryAuthFailed`` or blank the entire integration.
+        """
         try:
             return await coro
-        except SkiResortConnectionError as err:
+        except SkiResortError as err:
             _LOGGER.warning(
                 "%s: %s unavailable: %s", self.area.get("name"), label, err
             )
@@ -240,7 +257,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 item = await async_wikidata_item(self.hass, wikidata_id)
                 info.update(self._parse_wikidata(item))
-            except (SkiResortConnectionError, KeyError, IndexError, TypeError) as err:
+            except (SkiResortError, KeyError, IndexError, TypeError, ValueError) as err:
                 _LOGGER.debug("Wikidata enrichment failed for %s: %s", wikidata_id, err)
         skimap_id = self.area.get("sk")
         if skimap_id is not None:
@@ -248,7 +265,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 info["trail_map_url"] = await async_skimap_trailmap(
                     self.hass, skimap_id
                 )
-            except SkiResortConnectionError as err:
+            except SkiResortError as err:
                 _LOGGER.debug("skimap enrichment failed for %s: %s", skimap_id, err)
         return info
 

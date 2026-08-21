@@ -81,7 +81,9 @@ async def _get_json(
             resp = await client.get(
                 url, headers=headers, params=params, timeout=_TIMEOUT
             )
-        except httpx.HTTPError as err:
+        except (httpx.HTTPError, httpx.InvalidURL) as err:
+            # InvalidURL is not an HTTPError subclass; a mistyped Liftie base URL
+            # (e.g. missing scheme) lands here and must degrade, not crash.
             raise SkiResortConnectionError(f"Request to {url} failed: {err}") from err
 
         if resp.status_code in (401, 403):
@@ -184,7 +186,7 @@ async def async_skimap_trailmap(hass: HomeAssistant, skimap_id: int) -> str | No
     url = f"https://{SKIMAP_HOST}/skiareas/view/{skimap_id}"
     try:
         resp = await client.get(url, timeout=_TIMEOUT, follow_redirects=True)
-    except httpx.HTTPError as err:
+    except (httpx.HTTPError, httpx.InvalidURL) as err:
         raise SkiResortConnectionError(f"skimap {skimap_id}: {err}") from err
     if resp.status_code >= 300:
         return None

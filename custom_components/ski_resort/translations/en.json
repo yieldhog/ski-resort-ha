@@ -26,7 +26,8 @@
       "unknown": "Unexpected error."
     },
     "abort": {
-      "already_configured": "This ski area is already configured."
+      "already_configured": "This ski area is already configured.",
+      "area_not_found": "That ski area is no longer in the bundled list. Please search again."
     }
   },
   "options": {
@@ -48,6 +49,9 @@
           "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek."
         }
       }
+    },
+    "error": {
+      "invalid_url": "Enter a full URL starting with http:// or https://."
     }
   },
   "entity": {

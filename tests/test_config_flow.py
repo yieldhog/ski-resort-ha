@@ -145,3 +145,41 @@ async def test_options_flow(hass: HomeAssistant):
     assert entry.options[CONF_UNITS] == UNIT_METRIC
     assert entry.options[CONF_RAPIDAPI_KEY] == "abc"
     assert CONF_LIFTIE_BASE_URL not in entry.options  # blank dropped
+
+
+async def test_select_area_vanished_aborts(hass: HomeAssistant):
+    """If the picked area is no longer in the index, the flow aborts cleanly."""
+    p1, p2, p3, p4 = _patch_data(area=None)
+    with p1, p2, p3, p4:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": config_entries.SOURCE_USER}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_QUERY: "vail"}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_SKI_AREA: "vailid"}
+        )
+    assert result["type"] == FlowResultType.ABORT
+    assert result["reason"] == "area_not_found"
+
+
+async def test_options_invalid_liftie_url(hass: HomeAssistant):
+    """A Liftie base URL without a scheme is rejected."""
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id="vailid",
+        data={"id": "vailid", "name": "Vail", "area": AREA},
+        options={CONF_UNITS: UNIT_IMPERIAL},
+    )
+    entry.add_to_hass(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_SCAN_INTERVAL_MINUTES: 60,
+            CONF_UNITS: UNIT_IMPERIAL,
+            CONF_LIFTIE_BASE_URL: "homeassistant.local:3000",  # no scheme
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {CONF_LIFTIE_BASE_URL: "invalid_url"}

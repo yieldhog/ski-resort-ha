@@ -112,6 +112,9 @@ class SkiResortConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             area_id = user_input[CONF_SKI_AREA]
             area = await self.hass.async_add_executor_job(ski_data.get_area, area_id)
+            if area is None:
+                # The bundled index changed under an open flow; start over.
+                return self.async_abort(reason="area_not_found")
             await self.async_set_unique_id(area_id)
             self._abort_if_unique_id_configured()
             name = (user_input.get(CONF_NAME) or "").strip() or area.get("name")
@@ -163,12 +166,19 @@ class SkiResortOptionsFlow(OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Show and persist the options form."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            # Drop blank optional strings so unset stays unset.
-            cleaned = {
-                k: v for k, v in user_input.items() if not (isinstance(v, str) and not v)
-            }
-            return self.async_create_entry(data=cleaned)
+            base_url = (user_input.get(CONF_LIFTIE_BASE_URL) or "").strip()
+            if base_url and not base_url.startswith(("http://", "https://")):
+                errors[CONF_LIFTIE_BASE_URL] = "invalid_url"
+            if not errors:
+                # Drop blank optional strings so unset stays unset.
+                cleaned = {
+                    k: v
+                    for k, v in user_input.items()
+                    if not (isinstance(v, str) and not v)
+                }
+                return self.async_create_entry(data=cleaned)
 
         opts = self.config_entry.options
         schema = vol.Schema(
@@ -198,4 +208,6 @@ class SkiResortOptionsFlow(OptionsFlow):
                 ): str,
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(
+            step_id="init", data_schema=schema, errors=errors
+        )
