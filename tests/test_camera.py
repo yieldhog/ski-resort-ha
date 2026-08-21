@@ -45,6 +45,25 @@ async def test_no_camera_without_url(hass: HomeAssistant):
     ) is None
 
 
+async def test_camera_removed_when_url_cleared(hass: HomeAssistant):
+    """Blanking the webcam URL deletes the entity instead of orphaning it."""
+    from custom_components.ski_resort import camera as cam_mod
+
+    entry, _ = await setup_area(hass)  # no webcam URL configured
+    registry = er.async_get(hass)
+    unique = f"{entry.entry_id}_webcam"
+    # Simulate a webcam entity left over from a previous (URL-set) config.
+    registry.async_get_or_create("camera", DOMAIN, unique, config_entry=entry)
+    assert registry.async_get_entity_id("camera", DOMAIN, unique) is not None
+
+    added: list = []
+    await cam_mod.async_setup_entry(
+        hass, entry, lambda ents, *a, **k: added.extend(ents)
+    )
+    assert added == []  # nothing added
+    assert registry.async_get_entity_id("camera", DOMAIN, unique) is None  # removed
+
+
 async def test_camera_image_success(hass: HomeAssistant):
     entry, _ = await setup_area(hass, options={CONF_WEBCAM_URL: URL})
     cam = SkiResortWebcam(entry.runtime_data, URL)

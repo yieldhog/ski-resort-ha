@@ -14,11 +14,12 @@ import logging
 import httpx
 from homeassistant.components.camera import Camera
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.httpx_client import get_async_client
 
 from . import SkiResortConfigEntry
-from .const import CONF_WEBCAM_URL
+from .const import CONF_WEBCAM_URL, DOMAIN
 from .coordinator import SkiResortDataUpdateCoordinator
 from .entity import SkiResortEntity
 from .helpers import image_to_jpeg, resolve_webcam_url
@@ -35,10 +36,22 @@ async def async_setup_entry(
     entry: SkiResortConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the resort webcam camera when a URL is configured."""
+    """Set up the resort webcam camera, or remove it if the URL was cleared.
+
+    The entry reloads whenever options change, so clearing the webcam URL and
+    saving re-runs this with no URL — in which case we delete any previously
+    created webcam entity from the registry rather than leaving it orphaned as
+    ``unavailable``.
+    """
     url = resolve_webcam_url((entry.options.get(CONF_WEBCAM_URL) or "").strip())
+    unique_id = f"{entry.entry_id}_webcam"
     if url:
         async_add_entities([SkiResortWebcam(entry.runtime_data, url)])
+        return
+    registry = er.async_get(hass)
+    existing = registry.async_get_entity_id("camera", DOMAIN, unique_id)
+    if existing:
+        registry.async_remove(existing)
 
 
 class SkiResortWebcam(SkiResortEntity, Camera):

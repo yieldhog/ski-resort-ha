@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0b3] - 2026-08-21
+
+- **Clearing the webcam URL now removes the camera entity.** Previously,
+  blanking the webcam URL in the options left the `camera.*_webcam` entity
+  behind as `unavailable`. The camera platform now deletes the entity from the
+  registry when no URL is configured, so removing a webcam actually removes it.
+
 ## [0.6.0b2] - 2026-08-21
 
 - **Fixed the webcam live view showing a broken image.** Home Assistant renders
