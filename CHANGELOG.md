@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-08-21
+
+- Fix hassfest: remove a literal URL from the `liftie_base_url` option
+  description (hassfest disallows URLs in translation strings).
+
 ## [0.4.0] - 2026-08-21
 
 Open-data enrichment (Tier 3) and a quality-scale pass.

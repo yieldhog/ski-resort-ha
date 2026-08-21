@@ -43,7 +43,7 @@
           "forecast_resort": "RapidAPI snow-forecast resort name (optional)"
         },
         "data_description": {
-          "liftie_base_url": "e.g. http://homeassistant.local:3000 — if set, lift status comes from your Liftie instance (free).",
+          "liftie_base_url": "The base URL of your self-hosted Liftie instance (its host and port). When set, lift status comes from Liftie instead of RapidAPI — completely free.",
           "rapidapi_key": "Enables skiapi lift status and the RapidAPI snow-forecast. Leave blank to stay fully free.",
           "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek."
         }
