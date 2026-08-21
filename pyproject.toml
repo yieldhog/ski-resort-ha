@@ -1,0 +1,14 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+# Pyflakes + pycodestyle + import sorting, pyupgrade, and bugbear. E501 (line
+# length) is left to formatting rather than lint-enforced, matching Home
+# Assistant core's ruff setup.
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]

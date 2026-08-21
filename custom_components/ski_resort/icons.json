@@ -1,0 +1,18 @@
+{
+  "entity": {
+    "sensor": {
+      "fresh_snow": { "default": "mdi:snowflake" },
+      "top_snow_depth": { "default": "mdi:image-filter-hdr" },
+      "base_snow_depth": { "default": "mdi:snowflake-variant" },
+      "last_snow_date": { "default": "mdi:calendar" },
+      "forecast_3day": { "default": "mdi:weather-snowy" },
+      "lifts_open": { "default": "mdi:gondola" },
+      "lifts_total": { "default": "mdi:gondola" },
+      "lifts_open_percent": { "default": "mdi:percent" }
+    },
+    "binary_sensor": {
+      "powder_day": { "default": "mdi:snowflake", "state": { "on": "mdi:snowflake", "off": "mdi:snowflake-off" } },
+      "resort_open": { "default": "mdi:gondola" }
+    }
+  }
+}

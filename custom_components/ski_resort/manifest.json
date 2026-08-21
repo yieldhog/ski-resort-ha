@@ -1,0 +1,12 @@
+{
+  "domain": "ski_resort",
+  "name": "Ski Resort Forecast",
+  "codeowners": ["@yieldhog"],
+  "config_flow": true,
+  "documentation": "https://github.com/yieldhog/ski-resort-ha",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/yieldhog/ski-resort-ha/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

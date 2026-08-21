@@ -1,0 +1,72 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a ski resort",
+        "description": "Enter your RapidAPI key and a resort name from the Ski Resort Forecast API (for example, Vail or Beaver-Creek).",
+        "data": {
+          "api_key": "RapidAPI key",
+          "resort": "Resort name",
+          "name": "Display name (optional)",
+          "units": "Units"
+        },
+        "data_description": {
+          "resort": "The resort as the forecast API spells it, e.g. Vail, Beaver-Creek, Val-dIsere.",
+          "units": "Imperial (inches) or metric (centimetres)."
+        }
+      },
+      "reauth_confirm": {
+        "title": "Update RapidAPI key",
+        "description": "The stored key stopped working for {resort}. Enter a current RapidAPI key.",
+        "data": {
+          "api_key": "RapidAPI key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to reach the Ski Resort Forecast API. Check your network and try again.",
+      "invalid_auth": "The RapidAPI key was rejected. Check the key and that it is subscribed to the Ski Resort Forecast API.",
+      "unknown_resort": "That resort name wasn't found. Check the spelling the forecast API uses (hyphens for spaces).",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This resort is already configured.",
+      "reauth_successful": "Re-authentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Ski resort options",
+        "description": "Tune how often data is polled and enable optional lift status.",
+        "data": {
+          "scan_interval_minutes": "Update interval (minutes)",
+          "units": "Units",
+          "elevation": "Forecast elevation",
+          "lifts_enabled": "Enable lift status (needs the Ski Resorts and Conditions API)",
+          "lift_slug": "Lift-status resort slug"
+        },
+        "data_description": {
+          "elevation": "Which mountain elevation the forecast summary describes: top, mid, or bot.",
+          "lift_slug": "The resort slug used by the Ski Resorts and Conditions (skiapi) product, e.g. vail."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "fresh_snow": { "name": "Fresh snowfall" },
+      "top_snow_depth": { "name": "Top snow depth" },
+      "base_snow_depth": { "name": "Base snow depth" },
+      "last_snow_date": { "name": "Last snowfall date" },
+      "forecast_3day": { "name": "3-day forecast" },
+      "lifts_open": { "name": "Lifts open" },
+      "lifts_total": { "name": "Lifts total" },
+      "lifts_open_percent": { "name": "Lifts open percentage" }
+    },
+    "binary_sensor": {
+      "powder_day": { "name": "Powder day" },
+      "resort_open": { "name": "Resort open" }
+    }
+  }
+}
