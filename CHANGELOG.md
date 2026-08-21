@@ -3,6 +3,17 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0-beta.1] - 2026-08-21
+
+**First public beta.** Consolidates everything below into the first tagged
+release: OpenSkiMap-anchored setup (search ~6,000 ski areas, no API key), free
+Open-Meteo weather + snow, offline terrain metadata (lifts by type, runs by
+difficulty, vertical, elevations), an optional live lift source (self-hosted
+Liftie or RapidAPI skiapi), an optional RapidAPI snow-forecast, a skimap.org
+trail-map image, a resort-information sensor, powder-day / resort-open binary
+sensors, and an optional webcam camera (manual URL, with OpenSnow auto-convert).
+Hardened error handling throughout; nothing optional can crash the keyless core.
+
 ## [0.5.2] - 2026-08-21
 
 - **Removed the Wikidata resort-photo image entity.** It added little (the
