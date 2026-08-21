@@ -93,6 +93,20 @@ async def test_camera_image_webp_transcoded_to_jpeg(hass: HomeAssistant):
     assert cam.content_type == "image/jpeg"
 
 
+async def test_camera_image_transcode_failure_warns(hass: HomeAssistant):
+    """If a non-JPEG frame can't be transcoded, it's served as-is with a warn."""
+    entry, _ = await setup_area(hass, options={CONF_WEBCAM_URL: URL})
+    cam = SkiResortWebcam(entry.runtime_data, URL)
+    cam.hass = hass
+    with patch("custom_components.ski_resort.camera.get_async_client",
+               return_value=_fake_client(_resp(b"WEBPBYTES", "image/webp"))), \
+         patch("custom_components.ski_resort.camera.image_to_jpeg",
+               return_value=None):
+        data = await cam.async_camera_image()
+    assert data == b"WEBPBYTES"  # original bytes served (best effort)
+    assert cam.content_type == "image/jpeg"
+
+
 async def test_camera_image_cached(hass: HomeAssistant):
     entry, _ = await setup_area(hass, options={CONF_WEBCAM_URL: URL})
     cam = SkiResortWebcam(entry.runtime_data, URL)

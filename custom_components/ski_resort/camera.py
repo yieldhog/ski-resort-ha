@@ -90,17 +90,25 @@ class SkiResortWebcam(SkiResortEntity, Camera):
         except (httpx.HTTPError, httpx.InvalidURL) as err:
             _LOGGER.debug("Webcam fetch failed for %s: %s", self._url, err)
             return self._cache  # serve the last good frame if we have one
-        content_type = (resp.headers.get("content-type") or "").split(";")[0].strip()
+        content_type = (resp.headers.get("content-type") or "").split(";")[0].strip().lower()
         data = resp.content
         # HA's live view is an MJPEG stream; browsers only render JPEG frames in
         # it, so transcode anything else (e.g. OpenSnow's WebP) off the loop.
-        if "jpeg" not in content_type and "jpg" not in content_type:
+        if content_type not in ("image/jpeg", "image/jpg"):
             jpeg = await self.hass.async_add_executor_job(image_to_jpeg, data)
             if jpeg is not None:
                 data = jpeg
-                content_type = "image/jpeg"
-        if content_type:
-            self._attr_content_type = content_type
+            else:
+                _LOGGER.warning(
+                    "Webcam frame from %s (content-type %s) could not be "
+                    "transcoded to JPEG; the live preview may show a broken "
+                    "image even though snapshots download fine",
+                    self._url,
+                    content_type or "unknown",
+                )
+        # HA reads Camera.content_type (a plain attribute) for the MJPEG stream
+        # header; frames are always JPEG (transcoded, or already JPEG).
+        self.content_type = "image/jpeg"
         self._cache = data
         self._cache_at = now
         return self._cache

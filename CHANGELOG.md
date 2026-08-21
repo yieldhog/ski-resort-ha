@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0b5] - 2026-08-21
+
+- **Webcam live view: set the stream content-type correctly and warn on
+  transcode failure.** HA reads `Camera.content_type` (a plain attribute) for
+  the MJPEG live-view header; the previous fix set `_attr_content_type`, which
+  HA's camera doesn't read. Now the correct attribute is set to `image/jpeg`
+  (frames are always transcoded to JPEG). If a frame ever can't be transcoded,
+  a warning is logged naming the URL and content-type, so a broken preview is
+  diagnosable from the log instead of silent.
+
 ## [0.6.0b4] - 2026-08-21
 
 - **Clearing an optional field in the options now actually clears it.** The
