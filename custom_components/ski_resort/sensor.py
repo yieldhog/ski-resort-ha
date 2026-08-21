@@ -23,6 +23,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     PERCENTAGE,
+    EntityCategory,
     UnitOfSpeed,
     UnitOfTemperature,
 )
@@ -34,14 +35,18 @@ from .const import (
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
     CONF_RAPIDAPI_KEY,
+    DATA_INFO,
     DATA_LIFTS,
     DATA_SNOW,
     DATA_WEATHER,
     DEPTH_UNIT,
     ELEV_UNIT,
     LENGTH_UNIT,
+    OPENSKIMAP_PERMALINK,
+    SKIMAP_PERMALINK,
     UNIT_IMPERIAL,
     UNIT_METRIC,
+    WIKIDATA_PERMALINK,
     WX_FREEZING_LEVEL,
     WX_FRESH_SNOW,
     WX_SNOW_DEPTH,
@@ -52,6 +57,7 @@ from .coordinator import SkiResortDataUpdateCoordinator
 from .entity import SkiResortEntity
 from .helpers import cm_to_display, m_to_depth_display, m_to_elev_display
 
+PARALLEL_UPDATES = 0
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -111,6 +117,7 @@ async def async_setup_entry(
             coordinator, "base_elevation", elev, imperial,
             lambda a: a.get("vMin"), icon="mdi:terrain",
         ),
+        SkiResortInfoSensor(coordinator),
     ]
 
     # --- Live lifts (optional) ---
@@ -389,3 +396,46 @@ class SkiResortLastSnowDateSensor(SkiResortEntity, SensorEntity):
         """The last snowfall date."""
         snow = self._snow
         return snow.get("last_snow_date") if snow else None
+
+
+class SkiResortInfoSensor(SkiResortEntity, SensorEntity):
+    """Diagnostic sensor: resort status + metadata links and facts."""
+
+    _attr_translation_key = "resort_info"
+    _attr_icon = "mdi:information-outline"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: SkiResortDataUpdateCoordinator) -> None:
+        """Initialize the resort-info sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_resort_info"
+
+    @property
+    def _info(self) -> dict[str, Any]:
+        return (self.coordinator.data or {}).get(DATA_INFO) or {}
+
+    @property
+    def native_value(self) -> str | None:
+        """The OpenSkiMap operating status."""
+        return self.area.get("status")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Region, links, and enrichment facts."""
+        area = self.area
+        info = self._info
+        attrs: dict[str, Any] = {
+            "country": area.get("country"),
+            "region": area.get("region"),
+            "latitude": area.get("lat"),
+            "longitude": area.get("lon"),
+            "website": info.get("website") or area.get("web"),
+            "openskimap_url": OPENSKIMAP_PERMALINK.format(id=area.get("id")),
+        }
+        if info.get("opening_year"):
+            attrs["opening_year"] = info["opening_year"]
+        if area.get("wd"):
+            attrs["wikidata_url"] = WIKIDATA_PERMALINK.format(id=area["wd"])
+        if area.get("sk") is not None:
+            attrs["skimap_url"] = SKIMAP_PERMALINK.format(id=area["sk"])
+        return attrs

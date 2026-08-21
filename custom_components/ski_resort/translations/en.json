@@ -99,6 +99,9 @@
       },
       "last_snow_date": {
         "name": "Last snowfall date"
+      },
+      "resort_info": {
+        "name": "Resort information"
       }
     },
     "binary_sensor": {
@@ -107,6 +110,14 @@
       },
       "resort_open": {
         "name": "Resort open"
+      }
+    },
+    "image": {
+      "photo": {
+        "name": "Resort photo"
+      },
+      "trail_map": {
+        "name": "Trail map"
       }
     }
   }

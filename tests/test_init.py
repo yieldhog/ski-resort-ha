@@ -78,3 +78,12 @@ async def test_unload(hass: HomeAssistant):
     entry, _ = await setup_area(hass)
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert entry.state is ConfigEntryState.NOT_LOADED
+
+
+async def test_info_failure_is_non_fatal(hass: HomeAssistant):
+    """Enrichment failing (Wikidata/skimap) does not break setup."""
+    from custom_components.ski_resort.const import DATA_INFO
+
+    entry, _ = await setup_area(hass, info_error=SkiResortConnectionError("down"))
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.runtime_data.data[DATA_INFO] == {}

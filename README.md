@@ -35,6 +35,9 @@ opened") from open data.
   *ski-resorts-and-conditions* product. The Liftie slug is **auto-mapped** from
   your chosen ski area.
 - **Powder day** binary sensor.
+- **Resort photo & trail map** (open data) — a Wikidata photo and the
+  skimap.org trail map as HA image entities, plus a resort-info diagnostic
+  sensor with links and facts.
 - **Canonical IDs.** Every resort is keyed by its OpenSkiMap id, so entities are
   stable and consistent with the wider open-ski-data ecosystem.
 
@@ -97,8 +100,17 @@ key. The Liftie slug is filled in automatically when known.
 | Lifts · Runs · Vertical drop · Summit / Base elevation | sensor | OpenSkiMap |
 | Lifts open · % open | sensor | Liftie/skiapi (optional) |
 | Reported summit/base depth · fresh snow · last snowfall date | sensor | RapidAPI (optional) |
+| Resort information (status + links/facts) | sensor (diagnostic) | OpenSkiMap + Wikidata |
+| Resort photo · Trail map | image | Wikidata (Commons) · skimap.org |
 | Powder day | binary_sensor | Open-Meteo |
 | Resort open | binary_sensor | Liftie/skiapi (optional) |
+
+## Quality scale
+
+The integration is held to Home Assistant's Integration Quality Scale — it is
+Silver-complete and substantially Gold. See
+[`docs/quality-scale.md`](docs/quality-scale.md) for the full checklist and the
+remaining path to Gold.
 
 ## Refreshing the bundled data
 

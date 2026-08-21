@@ -12,6 +12,7 @@ PLATFORMS: list[Platform] = [
     Platform.WEATHER,
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
+    Platform.IMAGE,
 ]
 
 type SkiResortConfigEntry = ConfigEntry[SkiResortDataUpdateCoordinator]

@@ -1,12 +1,14 @@
 {
   "domain": "ski_resort",
   "name": "Ski Resort",
-  "codeowners": ["@yieldhog"],
+  "codeowners": [
+    "@yieldhog"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/yieldhog/ski-resort-ha",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/yieldhog/ski-resort-ha/issues",
   "requirements": [],
-  "version": "0.3.0"
+  "version": "0.4.0"
 }

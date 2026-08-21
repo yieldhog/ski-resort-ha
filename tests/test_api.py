@@ -102,3 +102,42 @@ async def test_skiapi_and_rapidapi_snow_shapes(hass):
     with patcher2:
         got = await async_rapidapi_snow(hass, "k", "Vail", "i")
     assert got == {"topSnowDepth": "80in"}
+
+
+async def test_wikidata_item(hass):
+    from custom_components.ski_resort.api import async_wikidata_item
+
+    patcher, _ = _patch_get(hass, httpx.Response(200, json={"statements": {"P18": []}}))
+    with patcher:
+        assert await async_wikidata_item(hass, "Q1") == {"statements": {"P18": []}}
+
+
+async def test_skimap_trailmap_parses_og_image(hass):
+    from custom_components.ski_resort.api import async_skimap_trailmap
+
+    html = '<meta property="og:image" content="https://files.skimap.org/abc">'
+    patcher, _ = _patch_get(hass, httpx.Response(200, text=html))
+    with patcher:
+        assert await async_skimap_trailmap(hass, 507) == "https://files.skimap.org/abc"
+
+
+async def test_skimap_trailmap_none_cases(hass):
+    from custom_components.ski_resort.api import async_skimap_trailmap
+
+    patcher, _ = _patch_get(hass, httpx.Response(301))  # redirect/error status
+    with patcher:
+        assert await async_skimap_trailmap(hass, 1) is None
+    patcher2, _ = _patch_get(hass, httpx.Response(200, text="<html>no og</html>"))
+    with patcher2:
+        assert await async_skimap_trailmap(hass, 1) is None
+
+
+async def test_skimap_trailmap_transport_error(hass):
+    from custom_components.ski_resort.api import (
+        SkiResortConnectionError,
+        async_skimap_trailmap,
+    )
+
+    patcher, _ = _patch_get(hass, side_effect=httpx.ConnectError("boom"))
+    with patcher, pytest.raises(SkiResortConnectionError):
+        await async_skimap_trailmap(hass, 1)

@@ -23,6 +23,11 @@ ATTRIBUTION = (
     "weather © Open-Meteo (CC-BY 4.0); lift status © Liftie (BSD)"
 )
 OPENSKIMAP_PERMALINK = "https://openskimap.org/?obj={id}"
+SKIMAP_PERMALINK = "https://skimap.org/skiareas/view/{id}"
+WIKIDATA_PERMALINK = "https://www.wikidata.org/wiki/{id}"
+COMMONS_FILEPATH = "https://commons.wikimedia.org/wiki/Special:FilePath/{name}"
+WIKIDATA_HOST = "www.wikidata.org"
+SKIMAP_HOST = "skimap.org"
 
 # --- Config entry data keys ------------------------------------------------
 CONF_AREA = "area"  # the bundled OpenSkiMap record snapshot (dict)
@@ -61,6 +66,7 @@ DATA_WEATHER = "weather"
 DATA_SNOW = "snow"  # RapidAPI snow-forecast (optional)
 DATA_LIFTS = "lifts"
 DATA_AREA = "area"
+DATA_INFO = "info"  # enrichment: photo, trail map, operator, opening year
 
 # Weather bundle sub-keys
 WX_TEMP = "temperature"

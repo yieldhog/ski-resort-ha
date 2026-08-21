@@ -23,8 +23,16 @@ AREA = {
     "liftTypes": {"chair_lift": 20, "gondola": 2},
     "runs": 241, "runKm": 204.9, "byDiff": {"easy": 45, "advanced": 110},
     "snowKm": 0.0, "vMin": 2451.7, "vMax": 3516.7,
-    "web": "https://www.vail.com", "wd": "Q14685139", "poly": True, "nordic": False,
+    "web": "https://www.vail.com", "wd": "Q14685139", "sk": 507,
+    "poly": True, "nordic": False,
 }
+
+WIKIDATA = {"statements": {
+    "P18": [{"value": {"content": "Vail.jpg"}}],
+    "P856": [{"value": {"content": "https://www.vail.com"}}],
+    "P571": [{"value": {"content": {"time": "+1962-00-00T00:00:00Z"}}}],
+}}
+TRAIL_MAP_URL = "https://files.skimap.org/trailmap507"
 
 OPEN_METEO = {
     "current": {
@@ -66,7 +74,8 @@ SNOW = {
 
 async def setup_area(hass: HomeAssistant, options=None, *, om=OPEN_METEO,
                      liftie=LIFTIE, skiapi=SKIAPI, snow=SNOW, area=None,
-                     om_error=None, lifts_error=None):
+                     om_error=None, lifts_error=None,
+                     wikidata=WIKIDATA, trail_map=TRAIL_MAP_URL, info_error=None):
     """Set up a ski-area entry with all api calls mocked; return (entry, mocks)."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -77,7 +86,6 @@ async def setup_area(hass: HomeAssistant, options=None, *, om=OPEN_METEO,
         options={CONF_UNITS: UNIT_IMPERIAL, **(options or {})},
     )
     entry.add_to_hass(hass)
-    mocks = {}
     with patch("custom_components.ski_resort.coordinator.async_open_meteo",
                new=AsyncMock(return_value=om, side_effect=om_error)) as m_om, \
          patch("custom_components.ski_resort.coordinator.async_liftie",
@@ -85,8 +93,13 @@ async def setup_area(hass: HomeAssistant, options=None, *, om=OPEN_METEO,
          patch("custom_components.ski_resort.coordinator.async_skiapi",
                new=AsyncMock(return_value=skiapi, side_effect=lifts_error)) as m_s, \
          patch("custom_components.ski_resort.coordinator.async_rapidapi_snow",
-               new=AsyncMock(return_value=snow)) as m_snow:
-        mocks = {"om": m_om, "liftie": m_l, "skiapi": m_s, "snow": m_snow}
+               new=AsyncMock(return_value=snow)) as m_snow, \
+         patch("custom_components.ski_resort.coordinator.async_wikidata_item",
+               new=AsyncMock(return_value=wikidata, side_effect=info_error)) as m_wd, \
+         patch("custom_components.ski_resort.coordinator.async_skimap_trailmap",
+               new=AsyncMock(return_value=trail_map, side_effect=info_error)) as m_tm:
+        mocks = {"om": m_om, "liftie": m_l, "skiapi": m_s, "snow": m_snow,
+                 "wikidata": m_wd, "trail_map": m_tm}
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     return entry, mocks

@@ -48,6 +48,9 @@
       },
       "last_snow_date": {
         "default": "mdi:calendar"
+      },
+      "resort_info": {
+        "default": "mdi:information-outline"
       }
     },
     "binary_sensor": {
@@ -60,6 +63,14 @@
       },
       "resort_open": {
         "default": "mdi:gondola"
+      }
+    },
+    "image": {
+      "photo": {
+        "default": "mdi:image"
+      },
+      "trail_map": {
+        "default": "mdi:map"
       }
     }
   }

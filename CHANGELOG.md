@@ -3,6 +3,22 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-08-21
+
+Open-data enrichment (Tier 3) and a quality-scale pass.
+
+- **Resort photo** and **trail map** image entities — from Wikidata (Wikimedia
+  Commons) and skimap.org respectively, resolved once and served as HA `image`
+  entities (only when available).
+- **Resort information** diagnostic sensor — operating status plus region,
+  website, opening year (Wikidata), coordinates, and OpenSkiMap/Wikidata/skimap
+  links.
+- Bundled index now carries the skimap.org id; enrichment is best-effort and
+  never blocks setup.
+- Quality scale: `PARALLEL_UPDATES = 0` on all platforms, a diagnostic entity
+  category, and a documented path to Gold (`docs/quality-scale.md`). The
+  integration is Silver-complete and substantially Gold.
+
 ## [0.3.0] - 2026-08-21
 
 Re-anchored the integration on OpenSkiMap and open data. **Breaking:** the

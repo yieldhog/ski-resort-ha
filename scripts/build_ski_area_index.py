@@ -73,6 +73,8 @@ def _slim(feature: dict) -> dict:
         "vMax": runs.get("maxElevation"),
         "web": (props.get("websites") or [None])[0],
         "wd": props.get("wikidataID"),
+        "sk": next((src["id"] for src in (props.get("sources") or [])
+                    if src.get("type") == "skimap.org"), None),
         "poly": feature["geometry"]["type"] in ("Polygon", "MultiPolygon"),
         "nordic": "nordic" in (props.get("activities") or []),
     }

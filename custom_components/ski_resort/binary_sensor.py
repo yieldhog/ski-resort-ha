@@ -31,6 +31,9 @@ from .entity import SkiResortEntity
 POWDER_THRESHOLD_CM = 10.0
 
 
+
+PARALLEL_UPDATES = 0
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: SkiResortConfigEntry,

@@ -29,6 +29,7 @@ from .const import (
 from .coordinator import SkiResortDataUpdateCoordinator
 from .entity import SkiResortEntity
 
+PARALLEL_UPDATES = 0
 
 async def async_setup_entry(
     hass: HomeAssistant,

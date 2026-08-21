@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from typing import Any
 from urllib.parse import quote
 
@@ -24,7 +25,13 @@ import httpx
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.httpx_client import get_async_client
 
-from .const import CONDITIONS_HOST, FORECAST_HOST, OPEN_METEO_HOST
+from .const import (
+    CONDITIONS_HOST,
+    FORECAST_HOST,
+    OPEN_METEO_HOST,
+    SKIMAP_HOST,
+    WIKIDATA_HOST,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -154,3 +161,34 @@ async def async_rapidapi_snow(
         params={"units": units},
     )
     return data if isinstance(data, dict) else {}
+
+
+# --- Enrichment: Wikidata (CC0) --------------------------------------------
+async def async_wikidata_item(hass: HomeAssistant, qid: str) -> dict[str, Any]:
+    """Fetch a Wikidata item's statements via the REST API (keyless, CC0)."""
+    data = await _get_json(
+        hass,
+        f"https://{WIKIDATA_HOST}/w/rest.php/wikibase/v1/entities/items/{quote(qid)}",
+    )
+    return data if isinstance(data, dict) else {}
+
+
+# --- Enrichment: skimap.org trail map (og:image) ---------------------------
+async def async_skimap_trailmap(hass: HomeAssistant, skimap_id: int) -> str | None:
+    """Resolve a resort's trail-map image URL from its skimap.org page.
+
+    skimap.org exposes the trail map as the page's ``og:image``; parse it out.
+    Returns ``None`` if unavailable.
+    """
+    client = get_async_client(hass)
+    url = f"https://{SKIMAP_HOST}/skiareas/view/{skimap_id}"
+    try:
+        resp = await client.get(url, timeout=_TIMEOUT, follow_redirects=True)
+    except httpx.HTTPError as err:
+        raise SkiResortConnectionError(f"skimap {skimap_id}: {err}") from err
+    if resp.status_code >= 300:
+        return None
+    match = re.search(
+        r'property="og:image"\s+content="([^"]+)"', resp.text
+    ) or re.search(r'content="([^"]+)"\s+property="og:image"', resp.text)
+    return match.group(1) if match else None

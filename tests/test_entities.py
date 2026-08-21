@@ -14,7 +14,7 @@ from custom_components.ski_resort.const import (
     UNIT_METRIC,
 )
 
-from ._setup import setup_area
+from ._setup import AREA, setup_area
 
 FULL_OPTS = {CONF_LIFT_SLUG: "vail", CONF_RAPIDAPI_KEY: "k",
              CONF_FORECAST_RESORT: "Vail"}
@@ -22,7 +22,7 @@ FULL_OPTS = {CONF_LIFT_SLUG: "vail", CONF_RAPIDAPI_KEY: "k",
 
 def _state(hass, entry, key):
     registry = er.async_get(hass)
-    for platform in ("sensor", "binary_sensor", "weather"):
+    for platform in ("sensor", "binary_sensor", "weather", "image"):
         eid = registry.async_get_entity_id(platform, DOMAIN, f"{entry.entry_id}_{key}")
         if eid:
             return hass.states.get(eid)
@@ -83,3 +83,39 @@ async def test_lift_sensors_absent_without_source(hass: HomeAssistant):
     entry, _ = await setup_area(hass)  # no lift options
     assert _state(hass, entry, "lifts_open") is None
     assert _state(hass, entry, "resort_open") is None
+
+
+async def test_resort_info_sensor(hass: HomeAssistant):
+    entry, _ = await setup_area(hass)
+    info = _state(hass, entry, "resort_info")
+    assert info.state == "operating"
+    assert info.attributes["region"] == "Colorado"
+    assert info.attributes["website"] == "https://www.vail.com"
+    assert info.attributes["openskimap_url"].endswith("vailid")
+    assert info.attributes["wikidata_url"].endswith("Q14685139")
+    assert info.attributes["skimap_url"].endswith("507")
+    assert info.attributes["opening_year"] == 1962  # from Wikidata P571
+
+
+async def test_image_entities(hass: HomeAssistant):
+    entry, mocks = await setup_area(hass)
+    photo = _state(hass, entry, "photo")
+    trail = _state(hass, entry, "trail_map")
+    assert photo is not None and photo.attributes.get("entity_picture")
+    assert trail is not None and trail.attributes.get("entity_picture")
+    # Enrichment is fetched once (static), not per refresh.
+    mocks["wikidata"].assert_called_once()
+    mocks["trail_map"].assert_called_once()
+
+
+async def test_no_enrichment_without_ids(hass: HomeAssistant):
+    """An area with no Wikidata/skimap ids has no image entities."""
+    bare = dict(AREA)
+    bare.pop("wd")
+    bare.pop("sk")
+    entry, _ = await setup_area(hass, area=bare)
+    assert _state(hass, entry, "photo") is None
+    assert _state(hass, entry, "trail_map") is None
+    # Info sensor is still present, without the enrichment links.
+    info = _state(hass, entry, "resort_info")
+    assert "wikidata_url" not in info.attributes

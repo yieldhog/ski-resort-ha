@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -23,8 +24,11 @@ from .api import (
     async_open_meteo,
     async_rapidapi_snow,
     async_skiapi,
+    async_skimap_trailmap,
+    async_wikidata_item,
 )
 from .const import (
+    COMMONS_FILEPATH,
     CONF_AREA,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
@@ -33,6 +37,7 @@ from .const import (
     CONF_SCAN_INTERVAL_MINUTES,
     CONF_UNITS,
     DATA_AREA,
+    DATA_INFO,
     DATA_LIFTS,
     DATA_SNOW,
     DATA_WEATHER,
@@ -66,6 +71,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.entry = entry
         self.area: dict[str, Any] = entry.data[CONF_AREA]
         self._prev_depth: float | None = None
+        self._info: dict[str, Any] | None = None
         minutes = entry.options.get(
             CONF_SCAN_INTERVAL_MINUTES, DEFAULT_SCAN_INTERVAL_MINUTES
         )
@@ -99,6 +105,9 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         lifts = await self._safe("lifts", self._fetch_lifts())
 
+        if self._info is None:
+            self._info = await self._fetch_info()
+
         if weather is None and snow is None and lifts is None:
             raise UpdateFailed(f"No data available for {self.area.get('name')}")
 
@@ -107,6 +116,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             DATA_SNOW: snow,
             DATA_LIFTS: lifts,
             DATA_AREA: self.area,
+            DATA_INFO: self._info or {},
         }
 
     async def _safe(self, label: str, coro: Any) -> Any:
@@ -220,3 +230,44 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         total = osm_total or reported_total
         pct = round(counts["open"] / total * 100) if total else None
         return {**counts, "total": total, "percentage": pct, "source": source}
+
+    # --- Enrichment (Wikidata photo/facts + skimap trail map) --------------
+    async def _fetch_info(self) -> dict[str, Any]:
+        """Best-effort static enrichment; never raises (each part is optional)."""
+        info: dict[str, Any] = {}
+        wikidata_id = self.area.get("wd")
+        if wikidata_id:
+            try:
+                item = await async_wikidata_item(self.hass, wikidata_id)
+                info.update(self._parse_wikidata(item))
+            except (SkiResortConnectionError, KeyError, IndexError, TypeError) as err:
+                _LOGGER.debug("Wikidata enrichment failed for %s: %s", wikidata_id, err)
+        skimap_id = self.area.get("sk")
+        if skimap_id is not None:
+            try:
+                info["trail_map_url"] = await async_skimap_trailmap(
+                    self.hass, skimap_id
+                )
+            except SkiResortConnectionError as err:
+                _LOGGER.debug("skimap enrichment failed for %s: %s", skimap_id, err)
+        return info
+
+    @staticmethod
+    def _parse_wikidata(item: dict[str, Any]) -> dict[str, Any]:
+        """Pull a photo URL, website, and opening year from a Wikidata item."""
+        statements = item.get("statements") or {}
+        out: dict[str, Any] = {}
+        image = statements.get("P18")
+        if image:
+            filename = image[0]["value"]["content"]
+            out["photo_url"] = (
+                COMMONS_FILEPATH.format(name=quote(filename)) + "?width=1024"
+            )
+        website = statements.get("P856")
+        if website:
+            out["website"] = website[0]["value"]["content"]
+        inception = statements.get("P571")
+        if inception:
+            time = inception[0]["value"]["content"]["time"]  # "+2010-00-00T..."
+            out["opening_year"] = int(time[1:5])
+        return out
