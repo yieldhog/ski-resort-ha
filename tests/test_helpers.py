@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 from datetime import date
-from io import BytesIO
 
 import pytest
 
 from custom_components.ski_resort.helpers import (
     cm_to_display,
     condition_from_wmo,
-    image_to_jpeg,
     m_to_depth_display,
     m_to_elev_display,
     parse_measure,
@@ -62,22 +60,6 @@ def test_sum_next_hours():
     assert sum_next_hours([], [], 24) is None
     assert sum_next_hours([1], [None, None], 24) is None
     assert sum_next_hours([1, 2, 3], [1.0, 2.0, 3.0], 2) == 3.0
-
-
-def test_image_to_jpeg_transcodes_webp():
-    """A WebP frame is transcoded to JPEG (browsers need JPEG in MJPEG streams)."""
-    from PIL import Image
-
-    src = BytesIO()
-    Image.new("RGB", (8, 8), (10, 20, 30)).save(src, format="WEBP")
-    out = image_to_jpeg(src.getvalue())
-    assert out is not None
-    assert out[:2] == b"\xff\xd8"  # JPEG SOI marker
-    assert Image.open(BytesIO(out)).format == "JPEG"
-
-
-def test_image_to_jpeg_bad_bytes_returns_none():
-    assert image_to_jpeg(b"not an image") is None
 
 
 def test_resolve_webcam_url():

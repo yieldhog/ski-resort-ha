@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime
-from io import BytesIO
 
 _NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
@@ -111,31 +110,6 @@ def resolve_webcam_url(url: str) -> str:
     if match:
         return f"https://cams.opensnow.com/latest/{match.group(1)}/720.webp"
     return url
-
-
-def image_to_jpeg(data: bytes) -> bytes | None:
-    """Transcode arbitrary image bytes to JPEG, or ``None`` on failure.
-
-    Home Assistant renders a still-image camera's live view as an MJPEG
-    (``multipart/x-mixed-replace``) stream, and browsers only decode **JPEG**
-    frames inside that stream reliably — a WebP or PNG frame shows as a broken
-    image even though a direct download of the same bytes works. Webcams like
-    OpenSnow serve WebP, so we normalize every non-JPEG frame here. Returns
-    ``None`` if the bytes can't be decoded (or Pillow is somehow unavailable),
-    letting the caller fall back to the original bytes.
-    """
-    try:
-        from PIL import Image  # noqa: PLC0415 - lazy: heavy import, camera-only
-    except ImportError:  # pragma: no cover - Pillow ships with Home Assistant
-        return None
-    try:
-        with Image.open(BytesIO(data)) as img:
-            rgb = img.convert("RGB")
-            out = BytesIO()
-            rgb.save(out, format="JPEG", quality=85)
-            return out.getvalue()
-    except (OSError, ValueError):
-        return None
 
 
 def sum_next_hours(times: list, values: list, hours: int) -> float | None:

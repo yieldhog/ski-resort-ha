@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0b7] - 2026-08-21
+
+- **Webcam is now an `image` entity, not a `camera` — the live preview works.**
+  A still camera's live view is an MJPEG stream that browsers only render for
+  JPEG frames, which made WebP webcams (e.g. OpenSnow) show a broken preview
+  even though snapshots downloaded fine. An **image** entity renders as a plain
+  `<img>`, which displays WebP/PNG/JPEG natively — no MJPEG, no transcoding, no
+  Pillow dependency. The entity moves from `camera.<name>_webcam` to
+  `image.<name>_webcam` and refreshes each poll. Clearing the URL still removes
+  it. **Note:** after updating, delete the old, now-unavailable
+  `camera.*_webcam` entity once (Settings → Devices & Services → Entities).
+
 ## [0.6.0b6] - 2026-08-21
 
 - **Stop retrying on HTTP 429 (rate/quota limit).** RapidAPI's metered plans
