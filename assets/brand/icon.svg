@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1C4C74"/><stop offset="1" stop-color="#0C2740"/>
+    </linearGradient>
+    <linearGradient id="rock" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5A97C9"/><stop offset="1" stop-color="#2C6398"/>
+    </linearGradient>
+    <linearGradient id="cab" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EEF6FF"/><stop offset="1" stop-color="#CBE0F2"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#tile)"/>
+  <polygon points="150,204 198,112 246,204" fill="#2E6DA0" opacity=".5"/>
+  <polygon points="26,204 104,74 186,204" fill="url(#rock)"/>
+  <polygon points="104,74 82,114 104,103 124,114" fill="#F3F9FF"/>
+  <line x1="104" y1="74" x2="110" y2="204" stroke="#0C2740" stroke-opacity=".18" stroke-width="4"/>
+  <line x1="212" y1="58" x2="48" y2="114" stroke="#8FD0F5" stroke-width="6.6" stroke-linecap="round"/>
+  <circle cx="212" cy="58" r="6" fill="#8FD0F5"/><circle cx="48" cy="114" r="6" fill="#8FD0F5"/>
+  <line x1="132" y1="88" x2="132" y2="99" stroke="#8FD0F5" stroke-width="4.4"/>
+  <rect x="112" y="99" width="40" height="26" rx="7" fill="url(#cab)"/>
+  <line x1="120" y1="112" x2="144" y2="112" stroke="#2E6DA0" stroke-width="3.2"/>
+</svg>
