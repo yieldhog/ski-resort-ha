@@ -23,7 +23,7 @@ def _fake_client(response=None, side_effect=None):
 async def test_async_image_follows_redirect(hass: HomeAssistant):
     """Image bytes are fetched with redirects followed; content-type is set."""
     entry, _ = await setup_area(hass)
-    img = SkiResortImage(entry.runtime_data, "photo", "photo_url")
+    img = SkiResortImage(entry.runtime_data, "trail_map", "trail_map_url")
     resp = httpx.Response(
         200, content=b"IMG", headers={"content-type": "image/png"},
         request=httpx.Request("GET", "https://example/x.png"),
@@ -37,7 +37,7 @@ async def test_async_image_follows_redirect(hass: HomeAssistant):
 async def test_async_image_failure_returns_none(hass: HomeAssistant):
     """A fetch error yields no image rather than raising."""
     entry, _ = await setup_area(hass)
-    img = SkiResortImage(entry.runtime_data, "photo", "photo_url")
+    img = SkiResortImage(entry.runtime_data, "trail_map", "trail_map_url")
     with _fake_client(side_effect=httpx.ConnectError("boom")):
         assert await img.async_image() is None
 
@@ -45,5 +45,5 @@ async def test_async_image_failure_returns_none(hass: HomeAssistant):
 async def test_async_image_no_url_returns_none(hass: HomeAssistant):
     """With no resolved URL, async_image returns None without a request."""
     entry, _ = await setup_area(hass, wikidata={}, trail_map=None)
-    img = SkiResortImage(entry.runtime_data, "photo", "photo_url")
+    img = SkiResortImage(entry.runtime_data, "trail_map", "trail_map_url")
     assert await img.async_image() is None

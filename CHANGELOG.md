@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.5.2] - 2026-08-21
+
+- **Removed the Wikidata resort-photo image entity.** It added little (the
+  Wikidata photo is often generic or mismatched). The **trail map** image entity
+  stays, and Wikidata's website + opening year still appear on the Resort
+  information sensor. Existing installs will show the old `image.*_resort_photo`
+  as unavailable — delete it from the entity registry.
+
 ## [0.5.1] - 2026-08-21
 
 - **OpenSnow cams made easy.** The webcam option now accepts an OpenSnow cam

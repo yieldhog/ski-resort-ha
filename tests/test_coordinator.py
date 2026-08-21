@@ -36,14 +36,13 @@ def test_shape_lifts_non_numeric_counts():
 
 def test_parse_wikidata_full():
     item = {"statements": {
-        "P18": [{"value": {"content": "Pic.jpg"}}],
         "P856": [{"value": {"content": "https://x.com"}}],
         "P571": [{"value": {"content": {"time": "+1962-00-00T00:00:00Z"}}}],
     }}
     out = C._parse_wikidata(item)
-    assert out["photo_url"].startswith("https://commons.wikimedia.org")
     assert out["website"] == "https://x.com"
     assert out["opening_year"] == 1962
+    assert "photo_url" not in out  # photo entity was removed
 
 
 def test_parse_wikidata_empty():

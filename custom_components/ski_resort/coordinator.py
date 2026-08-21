@@ -14,7 +14,6 @@ import asyncio
 import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -29,7 +28,6 @@ from .api import (
     async_wikidata_item,
 )
 from .const import (
-    COMMONS_FILEPATH,
     CONF_AREA,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
@@ -271,15 +269,9 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @staticmethod
     def _parse_wikidata(item: dict[str, Any]) -> dict[str, Any]:
-        """Pull a photo URL, website, and opening year from a Wikidata item."""
+        """Pull the official website and opening year from a Wikidata item."""
         statements = item.get("statements") or {}
         out: dict[str, Any] = {}
-        image = statements.get("P18")
-        if image:
-            filename = image[0]["value"]["content"]
-            out["photo_url"] = (
-                COMMONS_FILEPATH.format(name=quote(filename)) + "?width=1024"
-            )
         website = statements.get("P856")
         if website:
             out["website"] = website[0]["value"]["content"]

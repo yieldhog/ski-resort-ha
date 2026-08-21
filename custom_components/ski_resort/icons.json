@@ -66,9 +66,6 @@
       }
     },
     "image": {
-      "photo": {
-        "default": "mdi:image"
-      },
       "trail_map": {
         "default": "mdi:map"
       }

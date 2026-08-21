@@ -99,11 +99,11 @@ async def test_resort_info_sensor(hass: HomeAssistant):
 
 async def test_image_entities(hass: HomeAssistant):
     entry, mocks = await setup_area(hass)
-    photo = _state(hass, entry, "photo")
+    # The Wikidata photo entity was removed; only the trail map remains.
+    assert _state(hass, entry, "photo") is None
     trail = _state(hass, entry, "trail_map")
-    assert photo is not None and photo.attributes.get("entity_picture")
     assert trail is not None and trail.attributes.get("entity_picture")
-    # Enrichment is fetched once (static), not per refresh.
+    # Wikidata is still fetched once (for website + opening year on the info sensor).
     mocks["wikidata"].assert_called_once()
     mocks["trail_map"].assert_called_once()
 

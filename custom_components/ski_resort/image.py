@@ -32,8 +32,6 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     info = (coordinator.data or {}).get(DATA_INFO) or {}
     entities: list[ImageEntity] = []
-    if info.get("photo_url"):
-        entities.append(SkiResortImage(coordinator, "photo", "photo_url"))
     if info.get("trail_map_url"):
         entities.append(SkiResortImage(coordinator, "trail_map", "trail_map_url"))
     async_add_entities(entities)
