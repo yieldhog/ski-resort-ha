@@ -3,7 +3,7 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
-## [0.6.0-beta.2] - 2026-08-21
+## [0.6.0b2] - 2026-08-21
 
 - **Fixed the webcam live view showing a broken image.** Home Assistant renders
   a still-camera's live preview as an MJPEG stream, and browsers only decode
@@ -14,7 +14,7 @@ to [Semantic Versioning](https://semver.org/).
   ships with Home Assistant; if it were ever unavailable the original bytes are
   served unchanged.
 
-## [0.6.0-beta.1] - 2026-08-21
+## [0.6.0b1] - 2026-08-21
 
 **First public beta.** Consolidates everything below into the first tagged
 release: OpenSkiMap-anchored setup (search ~6,000 ski areas, no API key), free
