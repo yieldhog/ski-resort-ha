@@ -3,6 +3,24 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] - 2026-08-22
+
+**First stable release.** Graduates the 0.6.0 beta series to 1.0.0 — no
+functional change from `0.6.0b8`, just the move out of pre-release. Highlights:
+
+- **Keyless by default:** search ~6,000 OpenSkiMap ski areas; weather + snow from
+  free Open-Meteo; offline terrain metadata (lifts by type, runs by difficulty,
+  vertical, elevations).
+- **Free live lift status** via a self-hosted [Liftie](https://github.com/pirxpilot/liftie)
+  instance — see the companion
+  [add-on](https://github.com/yieldhog/hass-liftie-addon) — or optional RapidAPI
+  skiapi; percentage open computed against OpenSkiMap's authoritative lift count.
+- **Optional extras:** RapidAPI snow-forecast, a skimap.org trail-map image, a
+  resort webcam (image entity, OpenSnow auto-convert), and powder-day /
+  resort-open binary sensors.
+- **Hardened:** every optional source degrades independently; nothing can crash
+  the keyless core. The Liftie base URL tolerates a pasted full API path.
+
 ## [0.6.0b8] - 2026-08-22
 
 - **Liftie base URL is now forgiving of a pasted full API URL.** Entering the

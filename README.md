@@ -80,8 +80,10 @@ key. The Liftie slug is filled in automatically when known.
 
 - **Update interval** and **units** (imperial/metric).
 - **Lift slug** — auto-filled; override if the auto-map missed.
-- **Self-hosted Liftie base URL** (e.g. `http://homeassistant.local:3000`) — if
-  set, lift status comes from your free Liftie instance.
+- **Self-hosted Liftie base URL** — the **host and port only** (e.g.
+  `http://homeassistant.local:3000`), **not** the `/api/resort/...` path. If set,
+  lift status comes from your free Liftie instance. See
+  [Self-hosted lift status](#self-hosted-lift-status-free) below.
 - **RapidAPI key** — enables skiapi lift status and the RapidAPI snow-forecast.
 - **RapidAPI snow-forecast resort name** — adds reported base/summit depth etc.
 - **Webcam image URL** — a direct still-image link to a resort webcam, shown as an `image` entity. You can also paste an **OpenSnow cam page URL** (`opensnow.com/location/.../cams/ID`) and it's converted automatically. Some resorts block hotlinking.
@@ -90,6 +92,28 @@ key. The Liftie slug is filled in automatically when known.
 > against server-side calls, so live lifts need either a **self-hosted Liftie**
 > or a **RapidAPI key** (skiapi is the same Liftie data). Everything else works
 > without either.
+
+## Self-hosted lift status (free)
+
+For live lift open/closed counts with **no API key and no request quota**, run
+[Liftie](https://github.com/pirxpilot/liftie) on your own network. The easiest
+way is the companion Home Assistant add-on:
+
+**[yieldhog/hass-liftie-addon](https://github.com/yieldhog/hass-liftie-addon)**
+
+1. In Home Assistant: **Settings → Add-ons → Add-on Store → ⋮ → Repositories**,
+   add `https://github.com/yieldhog/hass-liftie-addon`, then install and start
+   **Liftie**. (Add-ons require Home Assistant OS or Supervised.)
+2. In this integration's **Configure**:
+   - **Liftie base URL** → the add-on's host and port, e.g.
+     `http://homeassistant.local:3000` (or your host's IP) — **not** the
+     `/api/resort/...` path.
+   - **Lift slug** → your resort (e.g. `vail`); usually auto-filled.
+3. Leave the **RapidAPI key** blank — when a Liftie base URL is set, it wins.
+
+The add-on lets you limit which resorts it tracks, tune scrape frequency, and it
+opens an automatic PR when upstream Liftie updates. See its
+[docs](https://github.com/yieldhog/hass-liftie-addon/blob/main/liftie/DOCS.md).
 
 ## Entities
 
