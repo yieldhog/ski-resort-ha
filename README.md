@@ -1,6 +1,9 @@
 # Ski Resort — Home Assistant integration
 
 [![hacs][hacs-badge]][hacs]
+[![GitHub Release][release-badge]][releases]
+[![Hassfest][hassfest-badge]][hassfest-workflow]
+[![Tests][tests-badge]][tests-workflow]
 ![HA Version](https://img.shields.io/badge/Home%20Assistant-%3E%3D%202024.12-brightgreen)
 
 A native Home Assistant integration for the world's ski resorts, anchored on
@@ -226,3 +229,9 @@ Integration code: [MIT](LICENSE). Bundled data retains its upstream licenses
 
 [hacs]: https://github.com/hacs/integration
 [hacs-badge]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
+[releases]: https://github.com/yieldhog/ski-resort-ha/releases
+[release-badge]: https://img.shields.io/github/v/release/yieldhog/ski-resort-ha?display_name=tag&sort=semver
+[hassfest-workflow]: https://github.com/yieldhog/ski-resort-ha/actions/workflows/hassfest.yml
+[hassfest-badge]: https://github.com/yieldhog/ski-resort-ha/actions/workflows/hassfest.yml/badge.svg
+[tests-workflow]: https://github.com/yieldhog/ski-resort-ha/actions/workflows/tests.yml
+[tests-badge]: https://github.com/yieldhog/ski-resort-ha/actions/workflows/tests.yml/badge.svg

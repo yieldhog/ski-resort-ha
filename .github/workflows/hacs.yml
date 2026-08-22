@@ -1,0 +1,21 @@
+name: HACS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Weekly run so upstream HACS changes are caught when the repo is quiet.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  hacs:
+    name: HACS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate the repository with the HACS action
+        uses: hacs/action@main
+        with:
+          category: integration

@@ -1,4 +1,4 @@
-name: Validate
+name: Tests
 
 on:
   push:
@@ -11,24 +11,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  hassfest:
-    name: Hassfest
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Validate the manifest with hassfest
-        uses: home-assistant/actions/hassfest@master
-
-  hacs:
-    name: HACS
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Validate the repository with the HACS action
-        uses: hacs/action@main
-        with:
-          category: integration
-
   lint:
     name: Ruff
     runs-on: ubuntu-latest
