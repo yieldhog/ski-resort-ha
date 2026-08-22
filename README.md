@@ -130,12 +130,74 @@ opens an automatic PR when upstream Liftie updates. See its
 | Powder day | binary_sensor | Open-Meteo |
 | Resort open | binary_sensor | Liftie/skiapi (optional) |
 
+## Data updates
+
+The integration **polls** on a fixed interval (default **3 hours**, minimum 60
+minutes — set it under **Configure**). Weather/snow come from Open-Meteo; live
+lift status from Liftie/skiapi when configured; terrain metadata is bundled and
+never fetched. Each source updates independently — if one is down, the others
+still refresh. Static enrichment (trail map, website, opening year) is fetched
+once and cached.
+
+## Known limitations
+
+- **Lift status needs a source.** liftie.info's public API blocks server-side
+  calls, so live lifts require a self-hosted Liftie or a RapidAPI key. Without
+  either, the lift/resort-open entities are simply absent.
+- **Off-season shows 0 open.** Correctly reflects reality — Liftie reports lifts
+  as `scheduled`/`closed` outside the season.
+- **Lift total vs. open source.** The lift *total* comes from OpenSkiMap
+  (authoritative); *open* count comes from Liftie, so the two can occasionally
+  disagree (e.g. a resort adds a lift OpenSkiMap hasn't mapped yet).
+- **RapidAPI is metered.** The optional RapidAPI sources have request quotas;
+  the self-hosted Liftie add-on avoids this entirely.
+- **Bundled resort index.** Search covers the resorts in the bundled OpenSkiMap
+  snapshot; regenerate it (below) to pick up newly added areas.
+
+## Troubleshooting
+
+- **Lift sensors are `unavailable`.** Check two things under **Configure**:
+  (1) the **Lift slug** is set (e.g. `vail`), and (2) the **Liftie base URL** is
+  the **host and port only** (e.g. `http://homeassistant.local:3000`) — a full
+  `.../api/resort/<slug>` URL produces a doubled path and a 404. Then look at
+  **Settings → System → Logs** for a `ski_resort` line naming the cause.
+- **Weather is missing.** Open-Meteo is keyless and global; a transient failure
+  clears on the next poll. Persistent failure usually means outbound HTTPS is
+  blocked on the HA host.
+- **RapidAPI source `unavailable`.** The log will say `rate or quota limit
+  reached (429)` when the plan's quota is spent — switch to the self-hosted
+  Liftie add-on, or wait for the quota to reset.
+- **Webcam not showing.** Confirm the URL returns an image directly (some
+  resorts block hotlinking). OpenSnow cam *page* URLs are auto-converted.
+
+## Example dashboard card
+
+```yaml
+type: entities
+title: Vail
+entities:
+  - entity: weather.vail_weather
+  - entity: sensor.vail_fresh_snowfall_24h
+  - entity: sensor.vail_snow_depth
+  - entity: sensor.vail_lifts_open
+  - entity: binary_sensor.vail_powder_day
+  - entity: binary_sensor.vail_resort_open
+  - entity: image.vail_trail_map
+```
+
+## Removing the integration
+
+**Settings → Devices & Services → Ski Resort → ⋮ → Delete** removes the config
+entry and all its entities. Then remove the repository from HACS. (The
+self-hosted Liftie add-on, if installed, is uninstalled separately from the
+add-on store.)
+
 ## Quality scale
 
-The integration is held to Home Assistant's Integration Quality Scale — it is
-Silver-complete and substantially Gold. See
-[`docs/quality-scale.md`](docs/quality-scale.md) for the full checklist and the
-remaining path to Gold.
+The integration is held to Home Assistant's Integration Quality Scale — Bronze,
+Silver, and Gold complete, and it meets the Platinum strict-typing bar (`mypy
+--strict` in CI). See [`docs/quality-scale.md`](docs/quality-scale.md) for the
+full checklist.
 
 ## Refreshing the bundled data
 
@@ -154,7 +216,8 @@ python3.13 -m venv .venv
 .venv/bin/python -m pytest -q
 ```
 
-CI runs **hassfest**, the **HACS** action, **ruff**, and pytest with coverage.
+CI runs **hassfest**, the **HACS** action, **ruff**, **mypy** (strict), and
+pytest with coverage.
 
 ## License
 

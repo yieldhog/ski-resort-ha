@@ -118,7 +118,11 @@ class SkiResortConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="area_not_found")
             await self.async_set_unique_id(area_id)
             self._abort_if_unique_id_configured()
-            name = (user_input.get(CONF_NAME) or "").strip() or area.get("name")
+            name = str(
+                (user_input.get(CONF_NAME) or "").strip()
+                or area.get("name")
+                or area_id
+            )
             slug = await self.hass.async_add_executor_job(
                 ski_data.liftie_slug_for, area_id
             )

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import date, datetime
+from typing import Any
 
 _NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")
 
@@ -112,7 +113,7 @@ def resolve_webcam_url(url: str) -> str:
     return url
 
 
-def sum_next_hours(times: list, values: list, hours: int) -> float | None:
+def sum_next_hours(times: list[Any], values: list[Any], hours: int) -> float | None:
     """Sum the next ``hours`` hourly values starting at the current hour.
 
     Open-Meteo returns aligned ``time``/value arrays; this sums the first

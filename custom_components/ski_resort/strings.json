@@ -1,4 +1,9 @@
 {
+  "exceptions": {
+    "outdated_entry": {
+      "message": "This ski resort was added by an older version of the integration and must be removed and added again."
+    }
+  },
   "config": {
     "step": {
       "user": {

@@ -70,3 +70,6 @@ jobs:
         run: python -m pytest -q --cov=custom_components/ski_resort --cov-report=term-missing --cov-fail-under=95
       - name: Enforce 100% config-flow coverage
         run: coverage report --include="*/config_flow.py" --fail-under=100
+      # Platinum quality-scale: strict static typing (config in pyproject.toml).
+      - name: Type-check with mypy (strict)
+        run: mypy

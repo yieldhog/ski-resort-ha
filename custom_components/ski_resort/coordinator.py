@@ -84,7 +84,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def imperial(self) -> bool:
         """Whether display units are imperial."""
-        return self.entry.options.get(CONF_UNITS, DEFAULT_UNITS) == UNIT_IMPERIAL
+        return bool(self.entry.options.get(CONF_UNITS, DEFAULT_UNITS) == UNIT_IMPERIAL)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch every section concurrently; each degrades independently.

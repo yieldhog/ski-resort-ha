@@ -7,7 +7,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError
 
-from .const import CONF_AREA
+from .const import CONF_AREA, DOMAIN
 from .coordinator import SkiResortDataUpdateCoordinator
 
 PLATFORMS: list[Platform] = [
@@ -25,8 +25,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: SkiResortConfigEntry) ->
     if CONF_AREA not in entry.data:
         # Entry predates the OpenSkiMap re-anchor; its data can't be migrated.
         raise ConfigEntryError(
-            "This ski resort was added by an older version and must be removed "
-            "and added again."
+            translation_domain=DOMAIN,
+            translation_key="outdated_entry",
         )
     coordinator = SkiResortDataUpdateCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()

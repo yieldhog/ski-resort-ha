@@ -105,8 +105,10 @@ async def async_setup_entry(
         SkiResortRunCountSensor(coordinator),
         SkiResortElevationSensor(
             coordinator, "vertical_drop", elev, imperial,
-            lambda a: (a.get("vMax") - a.get("vMin"))
-            if a.get("vMax") is not None and a.get("vMin") is not None else None,
+            lambda a: (vmax - vmin)
+            if (vmax := a.get("vMax")) is not None
+            and (vmin := a.get("vMin")) is not None
+            else None,
             icon="mdi:arrow-expand-vertical",
         ),
         SkiResortElevationSensor(

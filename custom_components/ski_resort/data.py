@@ -26,7 +26,8 @@ _CROSSWALK_FILE = _DATA_DIR / "liftie_crosswalk.json.gz"
 @lru_cache(maxsize=1)
 def _load_index() -> list[dict[str, Any]]:
     with gzip.open(_INDEX_FILE, "rt", encoding="utf-8") as handle:
-        return json.load(handle)
+        data: list[dict[str, Any]] = json.load(handle)
+    return data
 
 
 @lru_cache(maxsize=1)

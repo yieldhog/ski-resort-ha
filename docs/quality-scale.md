@@ -34,8 +34,7 @@ below reflects the current code.
 - **test-coverage** — **>95%** enforced in CI (currently ~99%).
 - **reauthentication-flow / action-exceptions** — n/a.
 
-## Gold — 🟡 mostly done
-Done:
+## Gold — ✅ complete
 - **devices** — one HA device per ski area, with location, region, and an
   OpenSkiMap `configuration_url`.
 - **diagnostics** — redacted entry + coordinator dump.
@@ -46,29 +45,30 @@ Done:
 - **icon-translations** — `icons.json` for every entity and state.
 - **reconfiguration** — the options flow reconfigures units, interval, and all
   provider settings without re-adding.
+- **brands** — the brand icon is **bundled** in `custom_components/ski_resort/
+  brand/` (HA 2026.3.0+ serves local brand images directly; no
+  home-assistant/brands submission needed). The HACS action still checks the
+  brands CDN, so its `brands` check stays ignored in CI.
+- **exception-translations** — the setup `ConfigEntryError` uses a
+  `translation_key` with a message under `strings.json` → `exceptions`.
+- **docs-*** — README covers installation, configuration parameters, data
+  updates, known limitations, troubleshooting, a dashboard example, and removal.
 - **dynamic-devices / stale-devices / discovery** — n/a (one user-added device
   per entry; no network discovery).
 
-Remaining for full Gold:
-- [ ] **brands** — submit `ski_resort` icon/logo to
-  [home-assistant/brands](https://github.com/home-assistant/brands) (external
-  PR; also clears the HACS `brands` check).
-- [ ] **exception-translations** — move user-facing error strings into
-  `strings.json` under `exceptions`.
-- [ ] **entity-disabled-by-default** — review niche entities (e.g. freezing
-  level, reported-snow) and disable-by-default where appropriate.
-- [ ] **docs-*** — expand docs: data-update cadence, known limitations,
-  supported functions, troubleshooting, and dashboard examples (this repo's
-  README + this file cover most; split out the remaining sections).
+Deliberately skipped:
+- **entity-disabled-by-default** — all entities ship **enabled**. The niche
+  ones (freezing level, reported-snow) were considered for disable-by-default,
+  but we prefer not to hide data users may expect; they can disable any entity
+  per-entity in HA.
 
 ## Platinum — 🟡 partial
 - **async-dependency / inject-websession** — ✅ fully async; uses HA's shared
   httpx client.
-- **strict-typing** — code is typed throughout; not yet verified under
-  `mypy --strict`.
+- **strict-typing** — ✅ passes `mypy` in **strict** mode (config in
+  `pyproject.toml`), enforced in CI.
 
 ## Summary
-The integration is **Silver-complete and substantially Gold**, with a short,
-mostly-documentation path to full Gold (plus the external brands submission).
-Publishing to HACS additionally requires making the repo public and adding a
-description + topics (see the README).
+The integration is **Silver- and Gold-complete** (with `entity-disabled-by-
+default` a deliberate opt-out), and meets the Platinum typing bar. It is
+distributed as a HACS custom repository with a bundled brand icon.

@@ -12,3 +12,15 @@ line-length = 88
 # Assistant core's ruff setup.
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.13"
+# The Platinum "strict-typing" bar. implicit_reexport is left on because Home
+# Assistant intends its public API to be consumed via re-exports (e.g.
+# `homeassistant.components.weather.WeatherEntityFeature`), which bare --strict
+# would otherwise reject.
+strict = true
+implicit_reexport = true
+warn_unused_ignores = true
+# Type-check the integration only; the test suite isn't held to strict typing.
+files = ["custom_components/ski_resort"]

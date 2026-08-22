@@ -3,3 +3,5 @@
 pytest-homeassistant-custom-component
 # Coverage, used to enforce 100% config-flow coverage in CI.
 pytest-cov
+# Strict static typing (Platinum quality-scale rule), enforced in CI.
+mypy

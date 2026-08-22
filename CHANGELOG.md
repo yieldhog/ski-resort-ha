@@ -3,6 +3,20 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-08-22
+
+Quality-scale polish (no functional change):
+
+- **Gold `exception-translations`** — the "added by an older version" setup
+  error is now a translated message (`strings.json` → `exceptions`).
+- **Platinum `strict-typing`** — the integration passes `mypy --strict`
+  (config in `pyproject.toml`), now enforced as a CI step.
+- **Gold `docs-*`** — README gains Data updates, Known limitations,
+  Troubleshooting (incl. the Liftie base-URL gotcha), an example dashboard
+  card, and removal instructions.
+- Documented `entity-disabled-by-default` as a deliberate opt-out (all entities
+  ship enabled).
+
 ## [1.0.0] - 2026-08-22
 
 **First stable release.** Graduates the 0.6.0 beta series to 1.0.0 — no
