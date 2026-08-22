@@ -72,6 +72,9 @@
       "freezing_level": {
         "name": "Freezing level"
       },
+      "snow_forecast": {
+        "name": "Snow forecast (5-day)"
+      },
       "temperature": {
         "name": "Temperature"
       },

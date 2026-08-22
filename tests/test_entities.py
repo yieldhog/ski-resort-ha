@@ -62,6 +62,26 @@ async def test_metric_units(hass: HomeAssistant):
     assert fresh.attributes["unit_of_measurement"] == "cm"
 
 
+async def test_snow_forecast_sensor(hass: HomeAssistant):
+    """5-day snow forecast: state is the total, `daily` carries each day."""
+    entry, _ = await setup_area(hass)  # imperial; daily snowfall_sum [12.0, 3.0] cm
+    snow = _state(hass, entry, "snow_forecast")
+    assert snow.state == "5.9"  # (4.7 + 1.2) in
+    daily = snow.attributes["daily"]
+    assert daily == [
+        {"date": "2026-01-25", "snowfall": 4.7},  # 12 cm -> in
+        {"date": "2026-01-26", "snowfall": 1.2},  # 3 cm -> in
+    ]
+
+
+async def test_snow_forecast_sensor_metric(hass: HomeAssistant):
+    entry, _ = await setup_area(hass, options={CONF_UNITS: UNIT_METRIC})
+    snow = _state(hass, entry, "snow_forecast")
+    assert snow.state == "15.0"  # 12 + 3 cm
+    assert snow.attributes["daily"][0]["snowfall"] == 12.0
+    assert snow.attributes["unit_of_measurement"] == "cm"
+
+
 async def test_lift_and_reported_sensors(hass: HomeAssistant):
     entry, _ = await setup_area(hass, options=FULL_OPTS)
     assert _state(hass, entry, "lifts_open").state == "10"

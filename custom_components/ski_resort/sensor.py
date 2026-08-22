@@ -44,9 +44,11 @@ from .const import (
     LENGTH_UNIT,
     OPENSKIMAP_PERMALINK,
     SKIMAP_PERMALINK,
+    SNOW_FORECAST_DAYS,
     UNIT_IMPERIAL,
     UNIT_METRIC,
     WIKIDATA_PERMALINK,
+    WX_DAILY,
     WX_FREEZING_LEVEL,
     WX_FRESH_SNOW,
     WX_SNOW_DEPTH,
@@ -100,6 +102,7 @@ async def async_setup_entry(
             device_class=SensorDeviceClass.WIND_SPEED,
             state_class=SensorStateClass.MEASUREMENT,
         ),
+        SkiResortSnowForecastSensor(coordinator, length, imperial),
         # --- Terrain (static OpenSkiMap) ---
         SkiResortLiftCountSensor(coordinator),
         SkiResortRunCountSensor(coordinator),
@@ -184,6 +187,68 @@ class SkiResortWeatherSensor(SkiResortEntity, SensorEntity):
     def native_value(self) -> Any:
         """Value from the weather bundle."""
         return self._value_fn(self._weather or {})
+
+
+class SkiResortSnowForecastSensor(SkiResortEntity, SensorEntity):
+    """Snowfall over the next few days (Open-Meteo daily forecast).
+
+    State is the total forecast snowfall over the next ``SNOW_FORECAST_DAYS``
+    days; the per-day breakdown (``[{date, snowfall}, ...]``) is exposed as the
+    ``daily`` attribute so dashboards and the TRMNL screen can render each day.
+    """
+
+    _attr_translation_key = "snow_forecast"
+    _attr_icon = "mdi:snowflake"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(
+        self,
+        coordinator: SkiResortDataUpdateCoordinator,
+        unit: str,
+        imperial: bool,
+    ) -> None:
+        """Initialize the snow-forecast sensor."""
+        super().__init__(coordinator)
+        self._imperial = imperial
+        self._attr_native_unit_of_measurement = unit
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_snow_forecast"
+
+    @property
+    def _weather(self) -> dict[str, Any] | None:
+        return (self.coordinator.data or {}).get(DATA_WEATHER)
+
+    @property
+    def _days(self) -> list[dict[str, Any]]:
+        """The next ``SNOW_FORECAST_DAYS`` daily-forecast entries."""
+        return ((self._weather or {}).get(WX_DAILY) or [])[:SNOW_FORECAST_DAYS]
+
+    @property
+    def available(self) -> bool:
+        """Available only when Open-Meteo returned a forecast."""
+        return super().available and self._weather is not None
+
+    @property
+    def native_value(self) -> float | None:
+        """Total snowfall (display units) over the next few days."""
+        values = [
+            v
+            for day in self._days
+            if (v := cm_to_display(day.get("snowfall_cm"), self._imperial)) is not None
+        ]
+        return round(sum(values), 1) if values else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Per-day snowfall, one entry per forecast day."""
+        return {
+            "daily": [
+                {
+                    "date": day.get("datetime"),
+                    "snowfall": cm_to_display(day.get("snowfall_cm"), self._imperial),
+                }
+                for day in self._days
+            ]
+        }
 
 
 class SkiResortLiftCountSensor(SkiResortEntity, SensorEntity):

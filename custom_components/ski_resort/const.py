@@ -81,5 +81,8 @@ WX_FREEZING_LEVEL = "freezing_level"
 WX_DAILY = "daily"  # HA daily forecast list
 WX_HOURLY = "hourly"  # HA hourly forecast list
 
+# Number of forecast days summarized by the snow-forecast sensor.
+SNOW_FORECAST_DAYS = 5
+
 # Difficulty ordering used for terrain sensors.
 DIFFICULTIES = ["novice", "easy", "intermediate", "advanced", "expert", "freeride"]

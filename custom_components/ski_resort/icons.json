@@ -10,6 +10,9 @@
       "freezing_level": {
         "default": "mdi:thermometer-water"
       },
+      "snow_forecast": {
+        "default": "mdi:snowflake"
+      },
       "temperature": {
         "default": "mdi:thermometer"
       },
