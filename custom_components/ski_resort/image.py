@@ -39,9 +39,11 @@ async def async_setup_entry(
 ) -> None:
     """Set up resort image entities (trail map + optional webcam)."""
     coordinator = entry.runtime_data
-    info = (coordinator.data or {}).get(DATA_INFO) or {}
     entities: list[ImageEntity] = []
-    if info.get("trail_map_url"):
+    # Gate on the static skimap id (always known at setup), not on the first
+    # enrichment fetch: a transient failure there must not permanently suppress
+    # the entity. Its ``available`` tracks whether the URL has resolved yet.
+    if coordinator.area.get("sk") is not None:
         entities.append(SkiResortImage(coordinator, "trail_map", "trail_map_url"))
 
     webcam_url = resolve_webcam_url((entry.options.get(CONF_WEBCAM_URL) or "").strip())

@@ -9,11 +9,13 @@ import pytest
 from custom_components.ski_resort.helpers import (
     cm_to_display,
     condition_from_wmo,
+    local_now_marker,
     m_to_depth_display,
     m_to_elev_display,
     parse_measure,
     parse_snow_date,
     sum_next_hours,
+    value_at_hour,
 )
 
 
@@ -60,6 +62,37 @@ def test_sum_next_hours():
     assert sum_next_hours([], [], 24) is None
     assert sum_next_hours([1], [None, None], 24) is None
     assert sum_next_hours([1, 2, 3], [1.0, 2.0, 3.0], 2) == 3.0
+
+
+def test_sum_next_hours_starts_at_current_hour():
+    # Open-Meteo hourly arrays begin at 00:00; snow only falls in hours 0..5.
+    times = [f"2026-01-25T{h:02d}:00" for h in range(24)]
+    values = [1.0] * 6 + [0.0] * 18
+    # At midnight the next 24h captures all of it...
+    assert sum_next_hours(times, values, 24, now="2026-01-25T00:00") == 6.0
+    # ...but by 06:00 the morning snow is in the past, so "next 24h" sees none.
+    assert sum_next_hours(times, values, 24, now="2026-01-25T06:00") == 0.0
+    # Unknown "now" (missing offset) falls back to the start of the array.
+    assert sum_next_hours(times, values, 24) == 6.0
+
+
+def test_value_at_hour():
+    times = [f"2026-01-25T{h:02d}:00" for h in range(24)]
+    depths = [float(h) for h in range(24)]
+    assert value_at_hour(times, depths, now="2026-01-25T09:00") == 9.0
+    assert value_at_hour(times, depths) == 0.0  # fallback: start of array
+    assert value_at_hour([], [], now="2026-01-25T09:00") is None
+    assert value_at_hour(times, [None] * 24, now="2026-01-25T09:00") is None
+
+
+def test_local_now_marker():
+    from datetime import UTC, datetime
+
+    now = datetime(2026, 1, 25, 22, 30, tzinfo=UTC)
+    # UTC-7 (Denver, MST) -> 15:00 local, truncated to the top of the hour.
+    assert local_now_marker(now, -7 * 3600) == "2026-01-25T15:00"
+    assert local_now_marker(now, None) is None
+    assert local_now_marker(now, True) is None  # bool is not a usable offset
 
 
 def test_resolve_webcam_url():

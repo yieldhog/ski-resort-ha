@@ -89,6 +89,38 @@ async def test_info_failure_is_non_fatal(hass: HomeAssistant):
     assert entry.runtime_data.data[DATA_INFO] == {}
 
 
+async def test_info_retries_after_transient_failure(hass: HomeAssistant):
+    """A transient enrichment failure isn't latched: the next poll repopulates."""
+    from unittest.mock import AsyncMock, patch
+
+    from custom_components.ski_resort.const import DATA_INFO
+
+    from ._setup import LIFTIE, OPEN_METEO, TRAIL_MAP_URL, WIKIDATA
+
+    # First refresh fails enrichment -> empty for this cycle, but not cached.
+    entry, _ = await setup_area(hass, info_error=SkiResortConnectionError("down"))
+    coordinator = entry.runtime_data
+    assert coordinator.data[DATA_INFO] == {}
+
+    # Next poll: enrichment now succeeds and is picked up (proving no latch).
+    with patch(
+        "custom_components.ski_resort.coordinator.async_open_meteo",
+        new=AsyncMock(return_value=OPEN_METEO),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_liftie",
+        new=AsyncMock(return_value=LIFTIE),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_wikidata_item",
+        new=AsyncMock(return_value=WIKIDATA),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_skimap_trailmap",
+        new=AsyncMock(return_value=TRAIL_MAP_URL),
+    ):
+        await coordinator.async_refresh()
+
+    assert coordinator.data[DATA_INFO].get("trail_map_url") == TRAIL_MAP_URL
+
+
 async def test_auth_error_on_optional_source_degrades(hass: HomeAssistant):
     """A bad RapidAPI key (auth error) disables lifts, not the whole entry."""
     from custom_components.ski_resort.api import SkiResortAuthError

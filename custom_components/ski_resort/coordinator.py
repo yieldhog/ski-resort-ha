@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import (
     SkiResortError,
@@ -54,7 +55,14 @@ from .const import (
     WX_TEMP,
     WX_WIND,
 )
-from .helpers import condition_from_wmo, parse_measure, parse_snow_date, sum_next_hours
+from .helpers import (
+    condition_from_wmo,
+    local_now_marker,
+    parse_measure,
+    parse_snow_date,
+    sum_next_hours,
+    value_at_hour,
+)
 
 if TYPE_CHECKING:
     from . import SkiResortConfigEntry
@@ -111,8 +119,11 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         results = await asyncio.gather(*(self._safe(n, jobs[n]) for n in names))
         data = dict(zip(names, results, strict=True))
 
-        if DATA_INFO in data:
-            self._info = data[DATA_INFO] or {}
+        if DATA_INFO in data and data[DATA_INFO] is not None:
+            # Cache only a completed enrichment (``_fetch_info`` returns ``None``
+            # on a transient failure); leaving ``self._info`` unset means the
+            # next poll retries instead of latching an empty result forever.
+            self._info = data[DATA_INFO]
 
         weather = data.get(DATA_WEATHER)
         snow = data.get(DATA_SNOW)
@@ -151,13 +162,14 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         hourly = raw.get("hourly") or {}
         daily = raw.get("daily") or {}
 
-        fresh = sum_next_hours(
-            hourly.get("time") or [], hourly.get("snowfall") or [], 24
-        )
-        depth_series = hourly.get("snow_depth") or []
-        depth = depth_series[0] if depth_series else None
-        fl_series = hourly.get("freezing_level_height") or []
-        freezing = fl_series[0] if fl_series else None
+        # Align the hourly window to the resort's current local hour; Open-Meteo
+        # arrays start at 00:00 today, so an unaligned read would total "today so
+        # far" and snapshot midnight instead of now.
+        times = hourly.get("time") or []
+        now = local_now_marker(dt_util.utcnow(), raw.get("utc_offset_seconds"))
+        fresh = sum_next_hours(times, hourly.get("snowfall") or [], 24, now)
+        depth = value_at_hour(times, hourly.get("snow_depth") or [], now)
+        freezing = value_at_hour(times, hourly.get("freezing_level_height") or [], now)
 
         return {
             WX_TEMP: current.get("temperature_2m"),
@@ -247,25 +259,38 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return {**counts, "total": total, "percentage": pct, "source": source}
 
     # --- Enrichment (Wikidata photo/facts + skimap trail map) --------------
-    async def _fetch_info(self) -> dict[str, Any]:
-        """Best-effort static enrichment; never raises (each part is optional)."""
+    async def _fetch_info(self) -> dict[str, Any] | None:
+        """Best-effort static enrichment; never raises (each part is optional).
+
+        Returns the enrichment dict once fetching *completes* — even when the
+        resort simply has nothing to enrich (an empty dict is a valid, cacheable
+        result). Returns ``None`` if a transient network error stopped it from
+        completing, so the coordinator retries on the next poll rather than
+        caching an empty result forever. Parse errors (malformed Wikidata) are
+        not transient, so they don't force a retry.
+        """
         info: dict[str, Any] = {}
+        completed = True
         wikidata_id = self.area.get("wd")
         if wikidata_id:
             try:
                 item = await async_wikidata_item(self.hass, wikidata_id)
                 info.update(self._parse_wikidata(item))
-            except (SkiResortError, KeyError, IndexError, TypeError, ValueError) as err:
-                _LOGGER.debug("Wikidata enrichment failed for %s: %s", wikidata_id, err)
+            except SkiResortError as err:
+                _LOGGER.debug("Wikidata fetch failed for %s: %s", wikidata_id, err)
+                completed = False
+            except (KeyError, IndexError, TypeError, ValueError) as err:
+                _LOGGER.debug("Wikidata parse failed for %s: %s", wikidata_id, err)
         skimap_id = self.area.get("sk")
         if skimap_id is not None:
             try:
-                info["trail_map_url"] = await async_skimap_trailmap(
-                    self.hass, skimap_id
-                )
+                trail_map_url = await async_skimap_trailmap(self.hass, skimap_id)
+                if trail_map_url:
+                    info["trail_map_url"] = trail_map_url
             except SkiResortError as err:
                 _LOGGER.debug("skimap enrichment failed for %s: %s", skimap_id, err)
-        return info
+                completed = False
+        return info if completed else None
 
     @staticmethod
     def _parse_wikidata(item: dict[str, Any]) -> dict[str, Any]:

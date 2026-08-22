@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+from custom_components.ski_resort.api import SkiResortConnectionError
 from custom_components.ski_resort.coordinator import (
     SkiResortDataUpdateCoordinator as C,
 )
@@ -12,6 +13,14 @@ from custom_components.ski_resort.coordinator import (
 def _coord(osm_total):
     c = MagicMock(spec=C)
     c.area = {"lifts": osm_total}
+    return c
+
+
+def _info_coord(area):
+    c = MagicMock(spec=C)
+    c.area = area
+    c.hass = MagicMock()
+    c._parse_wikidata = C._parse_wikidata  # use the real static parser
     return c
 
 
@@ -47,3 +56,47 @@ def test_parse_wikidata_full():
 
 def test_parse_wikidata_empty():
     assert C._parse_wikidata({}) == {}
+
+
+async def test_fetch_info_transient_failure_returns_none():
+    """A transient network error yields None so the caller retries (not {})."""
+    c = _info_coord({"wd": "Q1", "sk": 507})
+    with patch(
+        "custom_components.ski_resort.coordinator.async_wikidata_item",
+        new=AsyncMock(return_value={"statements": {}}),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_skimap_trailmap",
+        new=AsyncMock(side_effect=SkiResortConnectionError("down")),
+    ):
+        assert await C._fetch_info(c) is None
+
+
+async def test_fetch_info_completes_returns_dict():
+    """A completed fetch returns the enrichment dict (cacheable)."""
+    c = _info_coord({"wd": "Q1", "sk": 507})
+    with patch(
+        "custom_components.ski_resort.coordinator.async_wikidata_item",
+        new=AsyncMock(
+            return_value={"statements": {"P856": [{"value": {"content": "https://x"}}]}}
+        ),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_skimap_trailmap",
+        new=AsyncMock(return_value="https://files/trail"),
+    ):
+        assert await C._fetch_info(c) == {
+            "website": "https://x",
+            "trail_map_url": "https://files/trail",
+        }
+
+
+async def test_fetch_info_empty_but_complete_is_cacheable():
+    """No trail map available (but no error) completes with {} — not a retry."""
+    c = _info_coord({"wd": "Q1", "sk": 507})
+    with patch(
+        "custom_components.ski_resort.coordinator.async_wikidata_item",
+        new=AsyncMock(return_value={"statements": {}}),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_skimap_trailmap",
+        new=AsyncMock(return_value=None),
+    ):
+        assert await C._fetch_info(c) == {}
