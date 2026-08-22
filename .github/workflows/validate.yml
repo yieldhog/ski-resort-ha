@@ -28,12 +28,6 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
-          # The brand icon is bundled locally in custom_components/ski_resort/brand/
-          # (Home Assistant 2026.3.0+ serves local brand images, so no
-          # home-assistant/brands submission is needed). The HACS action still
-          # checks the brands CDN, so keep ignoring it until HACS recognises
-          # bundled brand images.
-          ignore: brands
 
   lint:
     name: Ruff
