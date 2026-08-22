@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0b8] - 2026-08-22
+
+- **Liftie base URL is now forgiving of a pasted full API URL.** Entering the
+  whole endpoint (`http://host:3000/api/resort/vail`) instead of just the server
+  root previously produced a doubled path (`.../api/resort/vail/api/resort/vail`)
+  and a 404, leaving the lift sensors unavailable. The client now trims any
+  `/api/...` suffix back to the root. The options field description was also
+  clarified to ask for the host and port only.
+
 ## [0.6.0b7] - 2026-08-21
 
 - **Webcam is now an `image` entity, not a `camera` — the live preview works.**

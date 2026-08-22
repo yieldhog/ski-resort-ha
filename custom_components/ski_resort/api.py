@@ -143,8 +143,17 @@ async def async_open_meteo(
 async def async_liftie(
     hass: HomeAssistant, base_url: str, slug: str
 ) -> dict[str, Any]:
-    """Fetch ``<base_url>/api/resort/<slug>`` from a Liftie instance."""
+    """Fetch ``<base_url>/api/resort/<slug>`` from a Liftie instance.
+
+    Tolerant of a base URL that already includes an ``/api/...`` path: pasting a
+    full endpoint like ``http://host:3000/api/resort/vail`` is trimmed back to
+    the server root so the request isn't doubled up (``.../api/resort/vail/api/
+    resort/vail``).
+    """
     base = base_url.rstrip("/")
+    api_index = base.find("/api/")
+    if api_index != -1:
+        base = base[:api_index]
     data = await _get_json(hass, f"{base}/api/resort/{quote(slug)}")
     return data if isinstance(data, dict) else {}
 

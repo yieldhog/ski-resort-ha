@@ -100,6 +100,15 @@ async def test_liftie_strips_trailing_slash(hass):
     assert called_url == "http://liftie.local/api/resort/vail"
 
 
+async def test_liftie_tolerates_full_api_url(hass):
+    """A base URL that already includes /api/resort/... is trimmed to the root."""
+    patcher, client = _patch_get(hass, httpx.Response(200, json={"lifts": {}}))
+    with patcher:
+        await async_liftie(hass, "http://host:3000/api/resort/vail", "vail")
+    called_url = client.get.call_args.args[0]
+    assert called_url == "http://host:3000/api/resort/vail"  # not doubled
+
+
 async def test_skiapi_and_rapidapi_snow_shapes(hass):
     """skiapi and rapidapi-snow return their JSON dicts (cover both clients)."""
     from custom_components.ski_resort.api import async_rapidapi_snow
