@@ -20,6 +20,9 @@ functional change from `0.6.0b8`, just the move out of pre-release. Highlights:
   resort-open binary sensors.
 - **Hardened:** every optional source degrades independently; nothing can crash
   the keyless core. The Liftie base URL tolerates a pasted full API path.
+- **Bundled brand icon** (`brand/icon.png` + `icon@2x.png`) so the integration
+  shows its own icon in Home Assistant (2026.3.0+ serves local brand images
+  directly — no home-assistant/brands submission needed).
 
 ## [0.6.0b8] - 2026-08-22
 
