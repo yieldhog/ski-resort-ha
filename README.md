@@ -96,6 +96,10 @@ key. The Liftie slug is filled in automatically when known.
   [Self-hosted lift status](#self-hosted-lift-status-free) below.
 - **RapidAPI key** — enables skiapi lift status and the RapidAPI snow-forecast.
 - **RapidAPI snow-forecast resort name** — adds reported base/summit depth etc.
+- **RapidAPI snow refresh interval (hours)** — polls the metered snow-forecast
+  source on its own slow cadence (default **12h**, independent of the main
+  update interval) so a bring-your-own key stays inside free-tier quotas;
+  the last reading is kept between refreshes.
 - **Webcam image URL** — a direct still-image link to a resort webcam, shown as an `image` entity. You can also paste an **OpenSnow cam page URL** (`opensnow.com/location/.../cams/ID`) and it's converted automatically. Some resorts block hotlinking.
 
 > **Lift status is optional.** liftie.info's public API is Cloudflare-protected

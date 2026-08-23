@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant
@@ -35,6 +35,7 @@ from .const import (
     CONF_AVALANCHE_CENTER,
     CONF_ENABLE_ALERTS,
     CONF_ENABLE_AVALANCHE,
+    CONF_FORECAST_INTERVAL_HOURS,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
@@ -48,6 +49,7 @@ from .const import (
     DATA_LIFTS,
     DATA_SNOW,
     DATA_WEATHER,
+    DEFAULT_FORECAST_INTERVAL_HOURS,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEFAULT_UNITS,
     DOMAIN,
@@ -88,6 +90,9 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._prev_depth: float | None = None
         self._info: dict[str, Any] | None = None
         self._av_center: str | None = None  # detected avalanche center id (cached)
+        # Throttled RapidAPI snow: last-good reading + when it was last attempted.
+        self._snow: dict[str, Any] | None = None
+        self._snow_at: datetime | None = None
         minutes = entry.options.get(
             CONF_SCAN_INTERVAL_MINUTES, DEFAULT_SCAN_INTERVAL_MINUTES
         )
@@ -118,7 +123,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         jobs: dict[str, Any] = {}
         if lat is not None and lon is not None:
             jobs[DATA_WEATHER] = self._fetch_weather(lat, lon)
-        if key and forecast_resort:
+        if key and forecast_resort and self._snow_due(opts):
             jobs[DATA_SNOW] = self._fetch_rapidapi_snow(key, forecast_resort)
         jobs[DATA_LIFTS] = self._fetch_lifts()
         if self._info is None:
@@ -138,8 +143,16 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # next poll retries instead of latching an empty result forever.
             self._info = data[DATA_INFO]
 
+        if DATA_SNOW in data:
+            # Stamp the attempt time whether or not it succeeded, so the metered
+            # RapidAPI source is hit at most once per configured interval; keep
+            # the last-good reading on failure rather than blanking it.
+            self._snow_at = dt_util.utcnow()
+            if data[DATA_SNOW] is not None:
+                self._snow = data[DATA_SNOW]
+
         weather = data.get(DATA_WEATHER)
-        snow = data.get(DATA_SNOW)
+        snow = self._snow
         lifts = data.get(DATA_LIFTS)
         if weather is None and snow is None and lifts is None:
             raise UpdateFailed(f"No data available for {self.area.get('name')}")
@@ -221,7 +234,21 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for i, day in enumerate(times)
         ]
 
-    # --- RapidAPI snow-forecast (optional) --------------------------------
+    # --- RapidAPI snow-forecast (optional, throttled) ---------------------
+    def _snow_due(self, opts: Any) -> bool:
+        """Whether the metered RapidAPI snow source is due for a refresh.
+
+        Reported depths change roughly daily, so this source polls on its own,
+        much slower cadence (``CONF_FORECAST_INTERVAL_HOURS``) than the main
+        coordinator to stay within RapidAPI free-tier quotas.
+        """
+        if self._snow is None or self._snow_at is None:
+            return True
+        hours = opts.get(
+            CONF_FORECAST_INTERVAL_HOURS, DEFAULT_FORECAST_INTERVAL_HOURS
+        )
+        return dt_util.utcnow() - self._snow_at >= timedelta(hours=hours)
+
     async def _fetch_rapidapi_snow(self, key: str, resort: str) -> dict[str, Any]:
         units_q = "i" if self.imperial else "m"
         raw = await async_rapidapi_snow(self.hass, key, resort, units_q)

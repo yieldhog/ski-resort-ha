@@ -43,6 +43,7 @@ CONF_UNITS = "units"
 CONF_SCAN_INTERVAL_MINUTES = "scan_interval_minutes"
 CONF_RAPIDAPI_KEY = "rapidapi_key"  # optional; unlocks RapidAPI snow + skiapi lifts
 CONF_FORECAST_RESORT = "forecast_resort"  # RapidAPI snow-forecast resort name
+CONF_FORECAST_INTERVAL_HOURS = "forecast_interval_hours"  # throttle RapidAPI snow polls
 CONF_LIFTIE_BASE_URL = "liftie_base_url"  # self-hosted Liftie base URL
 CONF_LIFT_SLUG = "lift_slug"  # Liftie/skiapi slug (auto from crosswalk)
 CONF_WEBCAM_URL = "webcam_url"  # optional direct still-image webcam URL
@@ -68,6 +69,10 @@ ELEV_UNIT = {UNIT_METRIC: "m", UNIT_IMPERIAL: "ft"}
 # --- Defaults --------------------------------------------------------------
 DEFAULT_SCAN_INTERVAL_MINUTES = 180
 MIN_SCAN_INTERVAL_MINUTES = 60
+# The RapidAPI snow-forecast source is metered; poll it far less often than the
+# main coordinator (reported depths change ~daily) to stay under free quotas.
+DEFAULT_FORECAST_INTERVAL_HOURS = 12
+MIN_FORECAST_INTERVAL_HOURS = 1
 
 # --- Coordinator data bundle keys ------------------------------------------
 DATA_WEATHER = "weather"

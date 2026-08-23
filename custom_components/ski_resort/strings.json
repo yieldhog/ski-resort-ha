@@ -49,6 +49,7 @@
           "liftie_base_url": "Self-hosted Liftie base URL (optional)",
           "rapidapi_key": "RapidAPI key (optional)",
           "forecast_resort": "RapidAPI snow-forecast resort name (optional)",
+          "forecast_interval_hours": "RapidAPI snow refresh interval (hours)",
           "webcam_url": "Webcam image URL (optional)"
         },
         "data_description": {
@@ -57,6 +58,7 @@
           "liftie_base_url": "Just the host and port of your self-hosted Liftie instance (its server root) — not the full /api/resort/... path. When set, lift status comes from Liftie instead of RapidAPI — completely free.",
           "rapidapi_key": "Enables skiapi lift status and the RapidAPI snow-forecast. Leave blank to stay fully free.",
           "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek.",
+          "forecast_interval_hours": "How often to refresh the metered RapidAPI snow source, independent of the main update interval. Reported depths change ~daily, so a large value (default 12h ≈ 60 calls/month) keeps you inside free-tier quotas.",
           "webcam_url": "A direct link to a resort webcam still image (JPG/PNG/WebP), shown as an image entity. You can also paste an OpenSnow cam page URL (opensnow.com/location/.../cams/ID) and it's converted automatically. Some resorts block hotlinking."
         }
       }

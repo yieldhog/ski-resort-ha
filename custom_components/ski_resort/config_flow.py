@@ -35,6 +35,7 @@ from .const import (
     CONF_COUNTRY,
     CONF_ENABLE_ALERTS,
     CONF_ENABLE_AVALANCHE,
+    CONF_FORECAST_INTERVAL_HOURS,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
@@ -46,9 +47,11 @@ from .const import (
     CONF_SKI_AREA,
     CONF_UNITS,
     CONF_WEBCAM_URL,
+    DEFAULT_FORECAST_INTERVAL_HOURS,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEFAULT_UNITS,
     DOMAIN,
+    MIN_FORECAST_INTERVAL_HOURS,
     MIN_SCAN_INTERVAL_MINUTES,
     UNITS,
 )
@@ -225,6 +228,12 @@ class SkiResortOptionsFlow(OptionsFlow):
                 optional(CONF_LIFTIE_BASE_URL): str,
                 optional(CONF_RAPIDAPI_KEY): str,
                 optional(CONF_FORECAST_RESORT): str,
+                vol.Required(
+                    CONF_FORECAST_INTERVAL_HOURS,
+                    default=opts.get(
+                        CONF_FORECAST_INTERVAL_HOURS, DEFAULT_FORECAST_INTERVAL_HOURS
+                    ),
+                ): vol.All(int, vol.Range(min=MIN_FORECAST_INTERVAL_HOURS)),
                 optional(CONF_WEBCAM_URL): str,
             }
         )

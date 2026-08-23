@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from homeassistant.util import dt as dt_util
+
 from custom_components.ski_resort.api import SkiResortConnectionError
+from custom_components.ski_resort.const import CONF_FORECAST_INTERVAL_HOURS
 from custom_components.ski_resort.coordinator import (
     SkiResortDataUpdateCoordinator as C,
 )
@@ -62,6 +66,19 @@ def test_parse_wikidata_full():
 
 def test_parse_wikidata_empty():
     assert C._parse_wikidata({}) == {}
+
+
+def test_snow_due_throttle():
+    c = MagicMock(spec=C)
+    c._snow = None
+    c._snow_at = None
+    assert C._snow_due(c, {}) is True  # never fetched -> due
+
+    c._snow = {"top": 83.0}
+    c._snow_at = dt_util.utcnow() - timedelta(hours=1)
+    assert C._snow_due(c, {CONF_FORECAST_INTERVAL_HOURS: 12}) is False  # too soon
+    c._snow_at = dt_util.utcnow() - timedelta(hours=13)
+    assert C._snow_due(c, {CONF_FORECAST_INTERVAL_HOURS: 12}) is True  # interval passed
 
 
 def test_shape_alert_and_skip_empty():
