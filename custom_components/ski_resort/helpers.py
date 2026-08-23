@@ -141,6 +141,41 @@ def _start_index(times: list[Any], now: str | None) -> int:
     return 0
 
 
+def _point_in_ring(x: float, y: float, ring: list[Any]) -> bool:
+    """Ray-casting point-in-polygon for a single GeoJSON ring ([[lon, lat], ...])."""
+    inside = False
+    n = len(ring)
+    j = n - 1
+    for i in range(n):
+        xi, yi = ring[i][0], ring[i][1]
+        xj, yj = ring[j][0], ring[j][1]
+        # The (yi > y) != (yj > y) guard also rules out yi == yj, so the divide
+        # below can't hit a zero denominator.
+        if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi) + xi):
+            inside = not inside
+        j = i
+    return inside
+
+
+def point_in_geometry(lon: float, lat: float, geometry: Any) -> bool:
+    """Whether (lon, lat) is inside a GeoJSON Polygon/MultiPolygon exterior ring.
+
+    Used to find the avalanche-forecast zone a resort falls in. Holes are
+    ignored (zones rarely have them, and a false positive is harmless here).
+    """
+    if not isinstance(geometry, dict):
+        return False
+    coords = geometry.get("coordinates") or []
+    try:
+        if geometry.get("type") == "Polygon":
+            return bool(coords) and _point_in_ring(lon, lat, coords[0])
+        if geometry.get("type") == "MultiPolygon":
+            return any(poly and _point_in_ring(lon, lat, poly[0]) for poly in coords)
+    except (TypeError, IndexError, ValueError):
+        return False
+    return False
+
+
 def sum_next_hours(
     times: list[Any], values: list[Any], hours: int, now: str | None = None
 ) -> float | None:

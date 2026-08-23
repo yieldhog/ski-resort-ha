@@ -54,6 +54,9 @@
       },
       "resort_info": {
         "default": "mdi:information-outline"
+      },
+      "avalanche_danger": {
+        "default": "mdi:alert"
       }
     },
     "binary_sensor": {
@@ -66,14 +69,15 @@
       },
       "resort_open": {
         "default": "mdi:gondola"
+      },
+      "weather_alert": {
+        "default": "mdi:alert-outline"
       }
     },
     "image": {
       "trail_map": {
         "default": "mdi:map"
-      }
-    },
-    "camera": {
+      },
       "webcam": {
         "default": "mdi:cctv"
       }

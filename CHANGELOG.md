@@ -3,6 +3,35 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-08-23
+
+New optional data sources and correctness fixes.
+
+### Added
+- **5-day snow-forecast sensor** — total upcoming snowfall, with a per-day
+  breakdown in the `daily` attribute (from Open-Meteo; no new fetch).
+- **NWS weather alerts** (opt-in, US, keyless) — a *Weather alert* binary
+  sensor for active National Weather Service alerts at the resort, with
+  headline / severity / expiry (and the full alert list) as attributes.
+- **Avalanche danger** (opt-in, keyless) — an *Avalanche danger* enum sensor
+  with the avalanche.org rating for the resort's forecast zone, plus zone,
+  travel advice, expiry, and forecast link as attributes. Resorts in no zone
+  latch off so the global map-layer isn't re-fetched.
+- **Throttled RapidAPI snow** — the metered snow-forecast source now refreshes
+  on its own slower cadence (`forecast_interval_hours`, default 12 h) so a
+  bring-your-own key stays within free-tier quotas; the last reading is kept
+  between refreshes.
+
+### Fixed
+- **Fresh snow / Powder day** — the 24 h window and the snow-depth / freezing-
+  level readings now align to the resort's current local hour instead of
+  midnight (Open-Meteo hourly arrays start at 00:00 local).
+- **Enrichment retry** — a transient Wikidata/skimap failure no longer
+  permanently suppresses the trail-map entity; it retries, and the entity is
+  gated on the static skimap id so it appears once the URL resolves.
+- Clamp lifts %-open to 100; use the `CONF_FORECAST_RESORT` constant instead of
+  a string literal; move the webcam icon to the `image` platform.
+
 ## [1.0.1] - 2026-08-22
 
 Quality-scale polish (no functional change):

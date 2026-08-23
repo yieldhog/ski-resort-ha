@@ -17,9 +17,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SkiResortConfigEntry
 from .const import (
+    CONF_ENABLE_ALERTS,
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
     CONF_RAPIDAPI_KEY,
+    DATA_ALERTS,
     DATA_LIFTS,
     DATA_WEATHER,
     WX_FRESH_SNOW,
@@ -48,6 +50,9 @@ async def async_setup_entry(
         opts.get(CONF_LIFTIE_BASE_URL) or opts.get(CONF_RAPIDAPI_KEY)
     ):
         entities.append(SkiResortOpenSensor(coordinator))
+
+    if opts.get(CONF_ENABLE_ALERTS):
+        entities.append(SkiResortAlertSensor(coordinator))
 
     async_add_entities(entities)
 
@@ -115,3 +120,48 @@ class SkiResortOpenSensor(SkiResortEntity, BinarySensorEntity):
         if not lifts:
             return None
         return isinstance(lifts.get("open"), int) and lifts["open"] > 0
+
+
+class SkiResortAlertSensor(SkiResortEntity, BinarySensorEntity):
+    """On when the NWS has an active weather alert for the resort (US only)."""
+
+    _attr_translation_key = "weather_alert"
+    _attr_device_class = BinarySensorDeviceClass.SAFETY
+    _attr_icon = "mdi:alert"
+
+    def __init__(self, coordinator: SkiResortDataUpdateCoordinator) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_weather_alert"
+
+    @property
+    def _alerts(self) -> dict[str, Any] | None:
+        return (self.coordinator.data or {}).get(DATA_ALERTS)
+
+    @property
+    def available(self) -> bool:
+        """Available only when the NWS query returned (even with zero alerts)."""
+        return super().available and self._alerts is not None
+
+    @property
+    def is_on(self) -> bool:
+        """True when at least one alert is active."""
+        alerts = self._alerts
+        return bool(alerts and alerts.get("count"))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Headline of the first alert plus the full list."""
+        alerts = self._alerts
+        if not alerts:
+            return None
+        items = alerts.get("alerts") or []
+        first = items[0] if items else {}
+        return {
+            "count": alerts.get("count", 0),
+            "event": first.get("event"),
+            "headline": first.get("headline"),
+            "severity": first.get("severity"),
+            "expires": first.get("expires"),
+            "alerts": items,
+        }

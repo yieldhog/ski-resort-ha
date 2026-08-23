@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from homeassistant.util import dt as dt_util
+
 from custom_components.ski_resort.api import SkiResortConnectionError
+from custom_components.ski_resort.const import CONF_FORECAST_INTERVAL_HOURS
 from custom_components.ski_resort.coordinator import (
     SkiResortDataUpdateCoordinator as C,
 )
@@ -37,6 +41,12 @@ def test_shape_lifts_falls_back_to_reported_total():
     assert shaped["percentage"] == 50
 
 
+def test_shape_lifts_clamps_percentage_to_100():
+    # Liftie reports more open than OpenSkiMap's total -> cap at 100%.
+    shaped = C._shape_lifts(_coord(5), {"open": 8, "closed": 0}, "liftie")
+    assert shaped["percentage"] == 100
+
+
 def test_shape_lifts_non_numeric_counts():
     shaped = C._shape_lifts(_coord(10), {"open": "x", "closed": 1}, "liftie")
     assert shaped["open"] == 0
@@ -56,6 +66,40 @@ def test_parse_wikidata_full():
 
 def test_parse_wikidata_empty():
     assert C._parse_wikidata({}) == {}
+
+
+def test_snow_due_throttle():
+    c = MagicMock(spec=C)
+    c._snow = None
+    c._snow_at = None
+    assert C._snow_due(c, {}) is True  # never fetched -> due
+
+    c._snow = {"top": 83.0}
+    c._snow_at = dt_util.utcnow() - timedelta(hours=1)
+    assert C._snow_due(c, {CONF_FORECAST_INTERVAL_HOURS: 12}) is False  # too soon
+    c._snow_at = dt_util.utcnow() - timedelta(hours=13)
+    assert C._snow_due(c, {CONF_FORECAST_INTERVAL_HOURS: 12}) is True  # interval passed
+
+
+def test_shape_alert_and_skip_empty():
+    good = C._shape_alert(
+        {"properties": {"event": "Winter Storm Warning", "severity": "Severe"}}
+    )
+    assert good["event"] == "Winter Storm Warning"
+    assert good["severity"] == "Severe"
+    assert C._shape_alert({"properties": {}}) is None  # no event -> dropped
+    assert C._shape_alert({}) is None
+
+
+def test_match_zone_finds_containing_polygon():
+    raw = {"features": [
+        {"geometry": {"type": "Polygon", "coordinates":
+                      [[[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]]]},
+         "properties": {"name": "z"}},
+    ]}
+    assert C._match_zone(raw, 0, 0)["properties"]["name"] == "z"  # (lat=0, lon=0)
+    assert C._match_zone(raw, 50, 50) is None
+    assert C._match_zone({"features": []}, 0, 0) is None
 
 
 async def test_fetch_info_transient_failure_returns_none():

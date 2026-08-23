@@ -6,6 +6,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.ski_resort.const import (
+    CONF_ENABLE_ALERTS,
+    CONF_ENABLE_AVALANCHE,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
     CONF_RAPIDAPI_KEY,
@@ -103,6 +105,75 @@ async def test_lift_sensors_absent_without_source(hass: HomeAssistant):
     entry, _ = await setup_area(hass)  # no lift options
     assert _state(hass, entry, "lifts_open") is None
     assert _state(hass, entry, "resort_open") is None
+
+
+async def test_weather_alert_and_avalanche_when_enabled(hass: HomeAssistant):
+    entry, _ = await setup_area(
+        hass, options={CONF_ENABLE_ALERTS: True, CONF_ENABLE_AVALANCHE: True}
+    )
+    alert = _state(hass, entry, "weather_alert")
+    assert alert.state == "on"
+    assert alert.attributes["event"] == "Winter Storm Warning"
+    assert alert.attributes["count"] == 1
+
+    av = _state(hass, entry, "avalanche_danger")
+    assert av.state == "considerable"
+    assert av.attributes["level"] == 3
+    assert av.attributes["zone"] == "Vail & Summit County"
+    assert av.attributes["forecast_url"].startswith("https://")
+
+
+async def test_avalanche_negative_cache(hass: HomeAssistant):
+    """A resort in no forecast zone latches off — no repeated global fetches."""
+    from unittest.mock import AsyncMock, patch
+
+    from ._setup import OPEN_METEO
+
+    empty = {"type": "FeatureCollection", "features": []}
+    entry, mocks = await setup_area(
+        hass, options={CONF_ENABLE_AVALANCHE: True}, avalanche=empty
+    )
+    assert mocks["avalanche"].call_count == 1
+    assert _state(hass, entry, "avalanche_danger").state == "unavailable"
+
+    coordinator = entry.runtime_data
+    with patch(
+        "custom_components.ski_resort.coordinator.async_open_meteo",
+        new=AsyncMock(return_value=OPEN_METEO),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_avalanche_map_layer",
+        new=AsyncMock(return_value=empty),
+    ) as m2:
+        await coordinator.async_refresh()
+    assert m2.call_count == 0  # latched: no more (large) global fetches
+
+
+async def test_avalanche_enum_guards_unknown_rating(hass: HomeAssistant):
+    """An out-of-scale rating maps to unknown, not an invalid enum state."""
+    bogus = {"type": "FeatureCollection", "features": [{
+        "geometry": {"type": "Polygon", "coordinates":
+                     [[[-107, 39], [-106, 39], [-106, 40], [-107, 40], [-107, 39]]]},
+        "properties": {"name": "Z", "danger": "bogus", "danger_level": 9},
+    }]}
+    entry, _ = await setup_area(
+        hass, options={CONF_ENABLE_AVALANCHE: True}, avalanche=bogus
+    )
+    av = _state(hass, entry, "avalanche_danger")
+    assert av.state == "unknown"  # not in the enum options -> None
+    assert av.attributes["level"] == 9  # attributes still populated
+
+
+async def test_alerts_avalanche_absent_when_disabled(hass: HomeAssistant):
+    entry, _ = await setup_area(hass)  # both default off
+    assert _state(hass, entry, "weather_alert") is None
+    assert _state(hass, entry, "avalanche_danger") is None
+
+
+async def test_weather_alert_off_when_none_active(hass: HomeAssistant):
+    entry, _ = await setup_area(hass, options={CONF_ENABLE_ALERTS: True}, alerts=[])
+    alert = _state(hass, entry, "weather_alert")
+    assert alert.state == "off"  # queried OK, just nothing active
+    assert alert.attributes["count"] == 0
 
 
 async def test_resort_info_sensor(hass: HomeAssistant):
