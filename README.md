@@ -124,6 +124,7 @@ opens an automatic PR when upstream Liftie updates. See its
 | --- | --- | --- |
 | Weather (current + daily forecast) | weather | Open-Meteo |
 | Fresh snowfall (24h) · Snow depth · Freezing level · Temperature · Wind | sensor | Open-Meteo |
+| Snow forecast (5-day total; per-day snowfall in the `daily` attribute) | sensor | Open-Meteo |
 | Lifts · Runs · Vertical drop · Summit / Base elevation | sensor | OpenSkiMap |
 | Lifts open · % open | sensor | Liftie/skiapi (optional) |
 | Reported summit/base depth · fresh snow · last snowfall date | sensor | RapidAPI (optional) |
@@ -182,6 +183,7 @@ entities:
   - entity: weather.vail_weather
   - entity: sensor.vail_fresh_snowfall_24h
   - entity: sensor.vail_snow_depth
+  - entity: sensor.vail_snow_forecast_5_day  # state = 5-day total; `daily` attr = per-day
   - entity: sensor.vail_lifts_open
   - entity: binary_sensor.vail_powder_day
   - entity: binary_sensor.vail_resort_open
