@@ -26,8 +26,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.httpx_client import get_async_client
 
 from .const import (
+    AVALANCHE_HOST,
     CONDITIONS_HOST,
     FORECAST_HOST,
+    NWS_HOST,
+    NWS_USER_AGENT,
     OPEN_METEO_HOST,
     SKIMAP_HOST,
     WIKIDATA_HOST,
@@ -180,6 +183,42 @@ async def async_rapidapi_snow(
         headers=headers,
         params={"units": units},
     )
+    return data if isinstance(data, dict) else {}
+
+
+# --- NWS weather alerts (US, public domain) --------------------------------
+async def async_nws_alerts(
+    hass: HomeAssistant, lat: float, lon: float
+) -> list[dict[str, Any]]:
+    """Fetch active NWS alerts for a point; returns the alert feature list.
+
+    api.weather.gov requires a descriptive User-Agent on every request. US-only;
+    a point outside NWS coverage simply returns no features.
+    """
+    data = await _get_json(
+        hass,
+        f"https://{NWS_HOST}/alerts/active",
+        headers={"User-Agent": NWS_USER_AGENT, "Accept": "application/geo+json"},
+        params={"point": f"{lat},{lon}"},
+    )
+    features = data.get("features") if isinstance(data, dict) else None
+    return features if isinstance(features, list) else []
+
+
+# --- Avalanche danger (avalanche.org, keyless) -----------------------------
+async def async_avalanche_map_layer(
+    hass: HomeAssistant, center_id: str | None = None
+) -> dict[str, Any]:
+    """Fetch the avalanche.org map-layer GeoJSON (all centers, or one center).
+
+    Passing a ``center_id`` fetches just that center's zones (smaller); omitting
+    it returns every US center, used once to auto-detect which center a resort
+    falls in.
+    """
+    path = "/v2/public/products/map-layer"
+    if center_id:
+        path += f"/{quote(center_id)}"
+    data = await _get_json(hass, f"https://{AVALANCHE_HOST}{path}")
     return data if isinstance(data, dict) else {}
 
 

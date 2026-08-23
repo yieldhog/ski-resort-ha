@@ -70,12 +70,38 @@ SNOW = {
     "freshSnowfall": "5in", "topSnowDepth": "83in",
     "botSnowDepth": "40in", "lastSnowfallDate": "25 Jan 2026",
 }
+ALERTS = [
+    {"properties": {
+        "event": "Winter Storm Warning", "severity": "Severe", "urgency": "Expected",
+        "headline": "Winter Storm Warning until 6 PM MST", "areaDesc": "Eagle County",
+        "onset": "2026-01-25T00:00:00-07:00", "expires": "2026-01-25T18:00:00-07:00",
+    }}
+]
+# A single zone polygon that contains Vail (lat 39.6, lon -106.35).
+AVALANCHE = {
+    "type": "FeatureCollection",
+    "features": [{
+        "type": "Feature",
+        "geometry": {"type": "Polygon", "coordinates": [
+            [[-107, 39], [-106, 39], [-106, 40], [-107, 40], [-107, 39]]
+        ]},
+        "properties": {
+            "name": "Vail & Summit County", "center": "Colorado Avalanche Information Center",
+            "center_id": "CAIC", "danger_level": 3, "danger": "considerable",
+            "color": "#ffa500", "start_date": "2026-01-25T06:00:00",
+            "end_date": "2026-01-26T06:00:00",
+            "travel_advice": "Dangerous avalanche conditions.",
+            "link": "https://avalanche.state.co.us/x", "warning": None,
+        },
+    }],
+}
 
 
 async def setup_area(hass: HomeAssistant, options=None, *, om=OPEN_METEO,
                      liftie=LIFTIE, skiapi=SKIAPI, snow=SNOW, area=None,
                      om_error=None, lifts_error=None,
-                     wikidata=WIKIDATA, trail_map=TRAIL_MAP_URL, info_error=None):
+                     wikidata=WIKIDATA, trail_map=TRAIL_MAP_URL, info_error=None,
+                     alerts=ALERTS, avalanche=AVALANCHE):
     """Set up a ski-area entry with all api calls mocked; return (entry, mocks)."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -97,9 +123,14 @@ async def setup_area(hass: HomeAssistant, options=None, *, om=OPEN_METEO,
          patch("custom_components.ski_resort.coordinator.async_wikidata_item",
                new=AsyncMock(return_value=wikidata, side_effect=info_error)) as m_wd, \
          patch("custom_components.ski_resort.coordinator.async_skimap_trailmap",
-               new=AsyncMock(return_value=trail_map, side_effect=info_error)) as m_tm:
+               new=AsyncMock(return_value=trail_map, side_effect=info_error)) as m_tm, \
+         patch("custom_components.ski_resort.coordinator.async_nws_alerts",
+               new=AsyncMock(return_value=alerts)) as m_al, \
+         patch("custom_components.ski_resort.coordinator.async_avalanche_map_layer",
+               new=AsyncMock(return_value=avalanche)) as m_av:
         mocks = {"om": m_om, "liftie": m_l, "skiapi": m_s, "snow": m_snow,
-                 "wikidata": m_wd, "trail_map": m_tm}
+                 "wikidata": m_wd, "trail_map": m_tm, "alerts": m_al,
+                 "avalanche": m_av}
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     return entry, mocks

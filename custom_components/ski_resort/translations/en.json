@@ -43,6 +43,8 @@
         "data": {
           "scan_interval_minutes": "Update interval (minutes)",
           "units": "Units",
+          "enable_alerts": "NWS weather alerts (US)",
+          "enable_avalanche": "Avalanche danger",
           "lift_slug": "Lift slug (Liftie/skiapi)",
           "liftie_base_url": "Self-hosted Liftie base URL (optional)",
           "rapidapi_key": "RapidAPI key (optional)",
@@ -50,6 +52,8 @@
           "webcam_url": "Webcam image URL (optional)"
         },
         "data_description": {
+          "enable_alerts": "Add a binary sensor for active US National Weather Service alerts (winter storm warnings, etc.) at the resort. Keyless; US only.",
+          "enable_avalanche": "Add a sensor with the avalanche.org danger rating for the resort's forecast zone. Keyless; US and participating international centers.",
           "liftie_base_url": "Just the host and port of your self-hosted Liftie instance (its server root) — not the full /api/resort/... path. When set, lift status comes from Liftie instead of RapidAPI — completely free.",
           "rapidapi_key": "Enables skiapi lift status and the RapidAPI snow-forecast. Leave blank to stay fully free.",
           "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek.",
@@ -116,6 +120,9 @@
       },
       "resort_info": {
         "name": "Resort information"
+      },
+      "avalanche_danger": {
+        "name": "Avalanche danger"
       }
     },
     "binary_sensor": {
@@ -124,6 +131,9 @@
       },
       "resort_open": {
         "name": "Resort open"
+      },
+      "weather_alert": {
+        "name": "Weather alert"
       }
     },
     "image": {

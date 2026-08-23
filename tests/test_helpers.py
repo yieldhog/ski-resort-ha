@@ -14,6 +14,7 @@ from custom_components.ski_resort.helpers import (
     m_to_elev_display,
     parse_measure,
     parse_snow_date,
+    point_in_geometry,
     sum_next_hours,
     value_at_hour,
 )
@@ -83,6 +84,22 @@ def test_value_at_hour():
     assert value_at_hour(times, depths) == 0.0  # fallback: start of array
     assert value_at_hour([], [], now="2026-01-25T09:00") is None
     assert value_at_hour(times, [None] * 24, now="2026-01-25T09:00") is None
+
+
+def test_point_in_geometry():
+    poly = {"type": "Polygon", "coordinates": [
+        [[-107, 39], [-106, 39], [-106, 40], [-107, 40], [-107, 39]]
+    ]}
+    assert point_in_geometry(-106.35, 39.6, poly) is True   # Vail
+    assert point_in_geometry(-108.0, 39.6, poly) is False   # west of the box
+    multi = {"type": "MultiPolygon", "coordinates": [
+        [[[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]]]
+    ]}
+    assert point_in_geometry(0, 0, multi) is True
+    assert point_in_geometry(5, 5, multi) is False
+    # Non-polygon / junk geometry never matches.
+    assert point_in_geometry(0, 0, {"type": "Point", "coordinates": [0, 0]}) is False
+    assert point_in_geometry(0, 0, None) is False
 
 
 def test_local_now_marker():

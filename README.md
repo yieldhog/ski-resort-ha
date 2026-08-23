@@ -50,6 +50,8 @@ opened") from open data.
 | [OpenSkiMap](https://openskimap.org) (OpenStreetMap + Skimap.org) | Resort identity, geography, terrain metadata | **ODbL** |
 | [Open-Meteo](https://open-meteo.com) | Weather + snow forecast | **CC-BY 4.0** |
 | [Liftie](https://github.com/pirxpilot/liftie) | Live lift status (self-hosted) | **BSD-3** |
+| [NWS](https://www.weather.gov/documentation/services-web-api) (api.weather.gov) | Weather alerts (US, optional) | **US public domain** |
+| [avalanche.org](https://github.com/NationalAvalancheCenter/Avalanche.org-Public-API-Docs) | Avalanche danger rating (optional) | free (gov/nonprofit) |
 | RapidAPI *ski-resorts-and-conditions* / *ski-resort-forecast* | Optional lift status / snow-forecast | proprietary |
 
 The bundled index and Liftie crosswalk are derived data under ODbL/BSD; see
@@ -82,6 +84,11 @@ key. The Liftie slug is filled in automatically when known.
 **Configure** on the integration exposes:
 
 - **Update interval** and **units** (imperial/metric).
+- **NWS weather alerts (US)** — opt-in; adds a *Weather alert* binary sensor
+  (with the alert headline/severity/expiry as attributes) from the free NWS API.
+- **Avalanche danger** — opt-in; adds an *Avalanche danger* sensor with the
+  avalanche.org rating for the resort's forecast zone (level, zone, travel
+  advice, expiry, and forecast link as attributes). Keyless.
 - **Lift slug** — auto-filled; override if the auto-map missed.
 - **Self-hosted Liftie base URL** — the **host and port only** (e.g.
   `http://homeassistant.local:3000`), **not** the `/api/resort/...` path. If set,
@@ -131,8 +138,10 @@ opens an automatic PR when upstream Liftie updates. See its
 | Resort information (status + links/facts) | sensor (diagnostic) | OpenSkiMap + Wikidata |
 | Trail map | image | skimap.org |
 | Webcam | image | your resort webcam URL (optional) |
+| Avalanche danger (rating + zone/advice/expiry) | sensor | avalanche.org (optional) |
 | Powder day | binary_sensor | Open-Meteo |
 | Resort open | binary_sensor | Liftie/skiapi (optional) |
+| Weather alert (active NWS alert + headline) | binary_sensor | NWS (optional, US) |
 
 ## Data updates
 

@@ -64,6 +64,27 @@ def test_parse_wikidata_empty():
     assert C._parse_wikidata({}) == {}
 
 
+def test_shape_alert_and_skip_empty():
+    good = C._shape_alert(
+        {"properties": {"event": "Winter Storm Warning", "severity": "Severe"}}
+    )
+    assert good["event"] == "Winter Storm Warning"
+    assert good["severity"] == "Severe"
+    assert C._shape_alert({"properties": {}}) is None  # no event -> dropped
+    assert C._shape_alert({}) is None
+
+
+def test_match_zone_finds_containing_polygon():
+    raw = {"features": [
+        {"geometry": {"type": "Polygon", "coordinates":
+                      [[[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]]]},
+         "properties": {"name": "z"}},
+    ]}
+    assert C._match_zone(raw, 0, 0)["properties"]["name"] == "z"  # (lat=0, lon=0)
+    assert C._match_zone(raw, 50, 50) is None
+    assert C._match_zone({"features": []}, 0, 0) is None
+
+
 async def test_fetch_info_transient_failure_returns_none():
     """A transient network error yields None so the caller retries (not {})."""
     c = _info_coord({"wd": "Q1", "sk": 507})

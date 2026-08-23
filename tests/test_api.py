@@ -122,6 +122,42 @@ async def test_skiapi_and_rapidapi_snow_shapes(hass):
     assert got == {"topSnowDepth": "80in"}
 
 
+async def test_nws_alerts_returns_features_with_user_agent(hass):
+    from custom_components.ski_resort.api import async_nws_alerts
+
+    body = {"features": [{"properties": {"event": "Winter Storm Warning"}}]}
+    patcher, client = _patch_get(hass, httpx.Response(200, json=body))
+    with patcher:
+        features = await async_nws_alerts(hass, 39.6, -106.35)
+    assert features == body["features"]
+    # NWS requires a descriptive User-Agent; the point param is "lat,lon".
+    kwargs = client.get.call_args.kwargs
+    assert kwargs["headers"]["User-Agent"]
+    assert kwargs["params"]["point"] == "39.6,-106.35"
+
+
+async def test_nws_alerts_non_dict_body_is_empty(hass):
+    from custom_components.ski_resort.api import async_nws_alerts
+
+    patcher, _ = _patch_get(hass, httpx.Response(200, json=[1, 2]))
+    with patcher:
+        assert await async_nws_alerts(hass, 1, 2) == []
+
+
+async def test_avalanche_map_layer_center_path(hass):
+    from custom_components.ski_resort.api import async_avalanche_map_layer
+
+    patcher, client = _patch_get(hass, httpx.Response(200, json={"features": []}))
+    with patcher:
+        await async_avalanche_map_layer(hass, "CAIC")
+    assert client.get.call_args.args[0].endswith("/map-layer/CAIC")
+    # No center -> the global layer (used for auto-detection).
+    patcher2, client2 = _patch_get(hass, httpx.Response(200, json={"features": []}))
+    with patcher2:
+        await async_avalanche_map_layer(hass)
+    assert client2.get.call_args.args[0].endswith("/map-layer")
+
+
 async def test_wikidata_item(hass):
     from custom_components.ski_resort.api import async_wikidata_item
 

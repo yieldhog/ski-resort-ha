@@ -32,10 +32,12 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SkiResortConfigEntry
 from .const import (
+    CONF_ENABLE_AVALANCHE,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
     CONF_RAPIDAPI_KEY,
+    DATA_AVALANCHE,
     DATA_INFO,
     DATA_LIFTS,
     DATA_SNOW,
@@ -133,6 +135,10 @@ async def async_setup_entry(
     ):
         entities.append(SkiResortLiftsOpenSensor(coordinator))
         entities.append(SkiResortLiftsPercentSensor(coordinator))
+
+    # --- Avalanche danger (optional) ---
+    if opts.get(CONF_ENABLE_AVALANCHE):
+        entities.append(SkiResortAvalancheSensor(coordinator))
 
     # --- Reported snow (RapidAPI, optional) ---
     if opts.get(CONF_RAPIDAPI_KEY) and opts.get(CONF_FORECAST_RESORT):
@@ -507,3 +513,50 @@ class SkiResortInfoSensor(SkiResortEntity, SensorEntity):
         if area.get("sk") is not None:
             attrs["skimap_url"] = SKIMAP_PERMALINK.format(id=area["sk"])
         return attrs
+
+
+class SkiResortAvalancheSensor(SkiResortEntity, SensorEntity):
+    """Avalanche danger rating for the resort's forecast zone (avalanche.org).
+
+    State is the danger word (e.g. "considerable"); the numeric level, zone,
+    travel advice, expiry, and forecast link are attributes.
+    """
+
+    _attr_translation_key = "avalanche_danger"
+    _attr_icon = "mdi:alert"
+
+    def __init__(self, coordinator: SkiResortDataUpdateCoordinator) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_avalanche_danger"
+
+    @property
+    def _avalanche(self) -> dict[str, Any] | None:
+        return (self.coordinator.data or {}).get(DATA_AVALANCHE)
+
+    @property
+    def available(self) -> bool:
+        """Available only when a forecast zone was matched."""
+        return super().available and self._avalanche is not None
+
+    @property
+    def native_value(self) -> str | None:
+        """The danger rating word for the zone."""
+        av = self._avalanche
+        return av.get("rating") if av else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Danger level, zone, advice, expiry, and forecast link."""
+        av = self._avalanche
+        if not av:
+            return None
+        return {
+            "level": av.get("level"),
+            "zone": av.get("zone"),
+            "center": av.get("center"),
+            "travel_advice": av.get("advice"),
+            "expires": av.get("expires"),
+            "warning": av.get("warning"),
+            "forecast_url": av.get("link"),
+        }

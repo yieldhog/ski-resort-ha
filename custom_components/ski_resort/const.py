@@ -16,6 +16,10 @@ MANUFACTURER = "OpenSkiMap"
 OPEN_METEO_HOST = "api.open-meteo.com"
 CONDITIONS_HOST = "ski-resorts-and-conditions.p.rapidapi.com"  # skiapi (= Liftie)
 FORECAST_HOST = "ski-resort-forecast.p.rapidapi.com"  # optional RapidAPI snow
+NWS_HOST = "api.weather.gov"  # US weather alerts (public domain)
+AVALANCHE_HOST = "api.avalanche.org"  # US/intl avalanche danger (avalanche.org)
+# NWS requires a descriptive User-Agent on every request.
+NWS_USER_AGENT = "home-assistant-ski_resort (https://github.com/yieldhog/ski-resort-ha)"
 
 # Attribution (data licenses). Surfaced on entities.
 ATTRIBUTION = (
@@ -42,6 +46,9 @@ CONF_FORECAST_RESORT = "forecast_resort"  # RapidAPI snow-forecast resort name
 CONF_LIFTIE_BASE_URL = "liftie_base_url"  # self-hosted Liftie base URL
 CONF_LIFT_SLUG = "lift_slug"  # Liftie/skiapi slug (auto from crosswalk)
 CONF_WEBCAM_URL = "webcam_url"  # optional direct still-image webcam URL
+CONF_ENABLE_ALERTS = "enable_alerts"  # US NWS weather alerts (opt-in)
+CONF_ENABLE_AVALANCHE = "enable_avalanche"  # avalanche.org danger (opt-in)
+CONF_AVALANCHE_CENTER = "avalanche_center"  # optional center id override (auto-detected)
 
 # Config-flow (search) keys
 CONF_QUERY = "query"
@@ -68,6 +75,8 @@ DATA_SNOW = "snow"  # RapidAPI snow-forecast (optional)
 DATA_LIFTS = "lifts"
 DATA_AREA = "area"
 DATA_INFO = "info"  # enrichment: photo, trail map, operator, opening year
+DATA_ALERTS = "alerts"  # NWS active weather alerts (optional)
+DATA_AVALANCHE = "avalanche"  # avalanche.org danger for the resort's zone (optional)
 
 # Weather bundle sub-keys
 WX_TEMP = "temperature"

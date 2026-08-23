@@ -33,6 +33,8 @@ from . import data as ski_data
 from .const import (
     CONF_AREA,
     CONF_COUNTRY,
+    CONF_ENABLE_ALERTS,
+    CONF_ENABLE_AVALANCHE,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
@@ -211,6 +213,14 @@ class SkiResortOptionsFlow(OptionsFlow):
                 vol.Required(
                     CONF_UNITS, default=opts.get(CONF_UNITS, DEFAULT_UNITS)
                 ): vol.In(UNITS),
+                vol.Required(
+                    CONF_ENABLE_ALERTS,
+                    default=opts.get(CONF_ENABLE_ALERTS, False),
+                ): bool,
+                vol.Required(
+                    CONF_ENABLE_AVALANCHE,
+                    default=opts.get(CONF_ENABLE_AVALANCHE, False),
+                ): bool,
                 optional(CONF_LIFT_SLUG): str,
                 optional(CONF_LIFTIE_BASE_URL): str,
                 optional(CONF_RAPIDAPI_KEY): str,

@@ -6,6 +6,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.ski_resort.const import (
+    CONF_ENABLE_ALERTS,
+    CONF_ENABLE_AVALANCHE,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
     CONF_RAPIDAPI_KEY,
@@ -103,6 +105,35 @@ async def test_lift_sensors_absent_without_source(hass: HomeAssistant):
     entry, _ = await setup_area(hass)  # no lift options
     assert _state(hass, entry, "lifts_open") is None
     assert _state(hass, entry, "resort_open") is None
+
+
+async def test_weather_alert_and_avalanche_when_enabled(hass: HomeAssistant):
+    entry, _ = await setup_area(
+        hass, options={CONF_ENABLE_ALERTS: True, CONF_ENABLE_AVALANCHE: True}
+    )
+    alert = _state(hass, entry, "weather_alert")
+    assert alert.state == "on"
+    assert alert.attributes["event"] == "Winter Storm Warning"
+    assert alert.attributes["count"] == 1
+
+    av = _state(hass, entry, "avalanche_danger")
+    assert av.state == "considerable"
+    assert av.attributes["level"] == 3
+    assert av.attributes["zone"] == "Vail & Summit County"
+    assert av.attributes["forecast_url"].startswith("https://")
+
+
+async def test_alerts_avalanche_absent_when_disabled(hass: HomeAssistant):
+    entry, _ = await setup_area(hass)  # both default off
+    assert _state(hass, entry, "weather_alert") is None
+    assert _state(hass, entry, "avalanche_danger") is None
+
+
+async def test_weather_alert_off_when_none_active(hass: HomeAssistant):
+    entry, _ = await setup_area(hass, options={CONF_ENABLE_ALERTS: True}, alerts=[])
+    alert = _state(hass, entry, "weather_alert")
+    assert alert.state == "off"  # queried OK, just nothing active
+    assert alert.attributes["count"] == 0
 
 
 async def test_resort_info_sensor(hass: HomeAssistant):

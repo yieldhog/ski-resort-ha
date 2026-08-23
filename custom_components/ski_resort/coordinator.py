@@ -21,7 +21,9 @@ from homeassistant.util import dt as dt_util
 
 from .api import (
     SkiResortError,
+    async_avalanche_map_layer,
     async_liftie,
+    async_nws_alerts,
     async_open_meteo,
     async_rapidapi_snow,
     async_skiapi,
@@ -30,13 +32,18 @@ from .api import (
 )
 from .const import (
     CONF_AREA,
+    CONF_AVALANCHE_CENTER,
+    CONF_ENABLE_ALERTS,
+    CONF_ENABLE_AVALANCHE,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
     CONF_RAPIDAPI_KEY,
     CONF_SCAN_INTERVAL_MINUTES,
     CONF_UNITS,
+    DATA_ALERTS,
     DATA_AREA,
+    DATA_AVALANCHE,
     DATA_INFO,
     DATA_LIFTS,
     DATA_SNOW,
@@ -60,6 +67,7 @@ from .helpers import (
     local_now_marker,
     parse_measure,
     parse_snow_date,
+    point_in_geometry,
     sum_next_hours,
     value_at_hour,
 )
@@ -79,6 +87,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.area: dict[str, Any] = entry.data[CONF_AREA]
         self._prev_depth: float | None = None
         self._info: dict[str, Any] | None = None
+        self._av_center: str | None = None  # detected avalanche center id (cached)
         minutes = entry.options.get(
             CONF_SCAN_INTERVAL_MINUTES, DEFAULT_SCAN_INTERVAL_MINUTES
         )
@@ -114,6 +123,10 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         jobs[DATA_LIFTS] = self._fetch_lifts()
         if self._info is None:
             jobs[DATA_INFO] = self._fetch_info()
+        if opts.get(CONF_ENABLE_ALERTS) and lat is not None and lon is not None:
+            jobs[DATA_ALERTS] = self._fetch_alerts(lat, lon)
+        if opts.get(CONF_ENABLE_AVALANCHE) and lat is not None and lon is not None:
+            jobs[DATA_AVALANCHE] = self._fetch_avalanche(lat, lon)
 
         names = list(jobs)
         results = await asyncio.gather(*(self._safe(n, jobs[n]) for n in names))
@@ -137,6 +150,8 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             DATA_LIFTS: lifts,
             DATA_AREA: self.area,
             DATA_INFO: self._info or {},
+            DATA_ALERTS: data.get(DATA_ALERTS),
+            DATA_AVALANCHE: data.get(DATA_AVALANCHE),
         }
 
     async def _safe(self, label: str, coro: Any) -> Any:
@@ -294,6 +309,72 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.debug("skimap enrichment failed for %s: %s", skimap_id, err)
                 completed = False
         return info if completed else None
+
+    # --- NWS weather alerts (optional) ------------------------------------
+    async def _fetch_alerts(self, lat: float, lon: float) -> dict[str, Any]:
+        """Fetch active NWS alerts for the resort point (US only)."""
+        features = await async_nws_alerts(self.hass, lat, lon)
+        alerts = [a for f in features if (a := self._shape_alert(f))]
+        return {"count": len(alerts), "alerts": alerts}
+
+    @staticmethod
+    def _shape_alert(feature: dict[str, Any]) -> dict[str, Any] | None:
+        """Normalize one NWS alert feature to the fields the entity exposes."""
+        props = (feature or {}).get("properties") or {}
+        event = props.get("event")
+        if not event:
+            return None
+        return {
+            "event": event,
+            "severity": props.get("severity"),
+            "urgency": props.get("urgency"),
+            "headline": props.get("headline"),
+            "area": props.get("areaDesc"),
+            "onset": props.get("onset") or props.get("effective"),
+            "expires": props.get("expires") or props.get("ends"),
+        }
+
+    # --- Avalanche danger (optional) --------------------------------------
+    async def _fetch_avalanche(self, lat: float, lon: float) -> dict[str, Any] | None:
+        """Find the avalanche zone containing the resort and shape its danger.
+
+        Uses a cached/configured center layer when known (smaller payload);
+        otherwise fetches the global layer once to auto-detect the center.
+        """
+        center = self.entry.options.get(CONF_AVALANCHE_CENTER) or self._av_center
+        raw = await async_avalanche_map_layer(self.hass, center)
+        zone = self._match_zone(raw, lat, lon)
+        if zone is None and center:
+            # Cached/configured center didn't contain the point — widen to global.
+            raw = await async_avalanche_map_layer(self.hass, None)
+            zone = self._match_zone(raw, lat, lon)
+        if zone is None:
+            return None
+        props = zone.get("properties") or {}
+        self._av_center = props.get("center_id") or self._av_center
+        return {
+            "level": props.get("danger_level"),
+            "rating": props.get("danger"),
+            "zone": props.get("name"),
+            "center": props.get("center"),
+            "center_id": props.get("center_id"),
+            "expires": props.get("end_date"),
+            "advice": props.get("travel_advice"),
+            "link": props.get("link"),
+            "color": props.get("color"),
+            "warning": bool(props.get("warning")),
+        }
+
+    @staticmethod
+    def _match_zone(
+        raw: dict[str, Any], lat: float, lon: float
+    ) -> dict[str, Any] | None:
+        """First map-layer feature whose polygon contains (lat, lon)."""
+        features: list[dict[str, Any]] = raw.get("features") or []
+        for feature in features:
+            if point_in_geometry(lon, lat, feature.get("geometry")):
+                return feature
+        return None
 
     @staticmethod
     def _parse_wikidata(item: dict[str, Any]) -> dict[str, Any]:
