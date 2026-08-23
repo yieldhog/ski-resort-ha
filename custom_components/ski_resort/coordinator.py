@@ -90,6 +90,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._prev_depth: float | None = None
         self._info: dict[str, Any] | None = None
         self._av_center: str | None = None  # detected avalanche center id (cached)
+        self._av_no_zone = False  # latched when the resort is in no forecast zone
         # Throttled RapidAPI snow: last-good reading + when it was last attempted.
         self._snow: dict[str, Any] | None = None
         self._snow_at: datetime | None = None
@@ -130,7 +131,12 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             jobs[DATA_INFO] = self._fetch_info()
         if opts.get(CONF_ENABLE_ALERTS) and lat is not None and lon is not None:
             jobs[DATA_ALERTS] = self._fetch_alerts(lat, lon)
-        if opts.get(CONF_ENABLE_AVALANCHE) and lat is not None and lon is not None:
+        if (
+            opts.get(CONF_ENABLE_AVALANCHE)
+            and lat is not None
+            and lon is not None
+            and not self._av_no_zone
+        ):
             jobs[DATA_AVALANCHE] = self._fetch_avalanche(lat, lon)
 
         names = list(jobs)
@@ -376,6 +382,14 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raw = await async_avalanche_map_layer(self.hass, None)
             zone = self._match_zone(raw, lat, lon)
         if zone is None:
+            # Zones are static, so a successful fetch that matches nothing means
+            # this resort has no avalanche coverage — latch it so we stop
+            # re-downloading the (large) global layer every poll.
+            self._av_no_zone = True
+            _LOGGER.debug(
+                "No avalanche zone contains %s; disabling avalanche polling",
+                self.area.get("name"),
+            )
             return None
         props = zone.get("properties") or {}
         self._av_center = props.get("center_id") or self._av_center

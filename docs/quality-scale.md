@@ -25,7 +25,11 @@ below reflects the current code.
 
 ## Silver — ✅ complete
 - **entity-unavailable** — entities expose `available`; optional sources go
-  unavailable rather than reporting stale/zero values.
+  unavailable rather than reporting stale/zero values. Optional sources
+  (Liftie/skiapi lifts, RapidAPI snow, NWS alerts, avalanche.org) each degrade
+  to `None` independently; only a total wipe-out raises `UpdateFailed`. The
+  metered RapidAPI snow source polls on its own throttled interval, and
+  avalanche polling latches off when the resort is in no forecast zone.
 - **log-when-unavailable** — the coordinator logs section failures; HA's
   `DataUpdateCoordinator` logs unavailability once.
 - **parallel-updates** — `PARALLEL_UPDATES = 0` on every platform (all reads go

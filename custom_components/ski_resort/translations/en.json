@@ -39,7 +39,7 @@
     "step": {
       "init": {
         "title": "Ski resort options",
-        "description": "Weather is free via Open-Meteo. Optionally add live lift status (self-hosted Liftie or a RapidAPI key) and a RapidAPI snow-forecast.",
+        "description": "Weather is free via Open-Meteo. Optionally add live lift status (self-hosted Liftie or a RapidAPI key), a RapidAPI snow-forecast, and the keyless NWS weather alerts and avalanche danger sources.",
         "data": {
           "scan_interval_minutes": "Update interval (minutes)",
           "units": "Units",

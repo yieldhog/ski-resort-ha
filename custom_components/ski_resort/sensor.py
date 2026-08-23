@@ -524,6 +524,16 @@ class SkiResortAvalancheSensor(SkiResortEntity, SensorEntity):
 
     _attr_translation_key = "avalanche_danger"
     _attr_icon = "mdi:alert"
+    _attr_device_class = SensorDeviceClass.ENUM
+    # North American public avalanche danger scale (avalanche.org `danger`).
+    _attr_options = [
+        "no rating",
+        "low",
+        "moderate",
+        "considerable",
+        "high",
+        "extreme",
+    ]
 
     def __init__(self, coordinator: SkiResortDataUpdateCoordinator) -> None:
         """Initialize."""
@@ -541,9 +551,10 @@ class SkiResortAvalancheSensor(SkiResortEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
-        """The danger rating word for the zone."""
+        """The danger rating word, restricted to the documented enum options."""
         av = self._avalanche
-        return av.get("rating") if av else None
+        rating = av.get("rating") if av else None
+        return rating if rating in self._attr_options else None
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
