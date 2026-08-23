@@ -26,6 +26,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.httpx_client import get_async_client
 
 from .const import (
+    AVALANCHE_CA_HOST,
     AVALANCHE_HOST,
     CONDITIONS_HOST,
     FORECAST_HOST,
@@ -220,6 +221,27 @@ async def async_avalanche_map_layer(
         path += f"/{quote(center_id)}"
     data = await _get_json(hass, f"https://{AVALANCHE_HOST}{path}")
     return data if isinstance(data, dict) else {}
+
+
+# --- Avalanche danger: Avalanche Canada (keyless) --------------------------
+async def async_avalanche_ca_areas(hass: HomeAssistant) -> dict[str, Any]:
+    """Fetch Avalanche Canada forecast-region polygons as GeoJSON.
+
+    Each feature's ``id`` joins to a metadata entry's ``area.id`` for the
+    current danger rating.
+    """
+    data = await _get_json(
+        hass, f"https://{AVALANCHE_CA_HOST}/forecasts/en/areas"
+    )
+    return data if isinstance(data, dict) else {}
+
+
+async def async_avalanche_ca_metadata(hass: HomeAssistant) -> list[dict[str, Any]]:
+    """Fetch Avalanche Canada per-region forecast metadata (danger + names)."""
+    data = await _get_json(
+        hass, f"https://{AVALANCHE_CA_HOST}/forecasts/en/metadata"
+    )
+    return data if isinstance(data, list) else []
 
 
 # --- Enrichment: Wikidata (CC0) --------------------------------------------

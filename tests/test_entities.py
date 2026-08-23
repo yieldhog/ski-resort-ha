@@ -16,7 +16,7 @@ from custom_components.ski_resort.const import (
     UNIT_METRIC,
 )
 
-from ._setup import AREA, setup_area
+from ._setup import AREA, AREA_CA, setup_area
 
 FULL_OPTS = {CONF_LIFT_SLUG: "vail", CONF_RAPIDAPI_KEY: "k",
              CONF_FORECAST_RESORT: "Vail"}
@@ -121,6 +121,32 @@ async def test_weather_alert_and_avalanche_when_enabled(hass: HomeAssistant):
     assert av.attributes["level"] == 3
     assert av.attributes["zone"] == "Vail & Summit County"
     assert av.attributes["forecast_url"].startswith("https://")
+
+
+async def test_avalanche_canada(hass: HomeAssistant):
+    """A Canadian resort routes to Avalanche Canada (region polygon + metadata)."""
+    entry, mocks = await setup_area(
+        hass, area=AREA_CA, options={CONF_ENABLE_AVALANCHE: True}
+    )
+    av = _state(hass, entry, "avalanche_danger")
+    assert av.state == "considerable"  # highestDanger value "3"
+    assert av.attributes["level"] == 3
+    assert av.attributes["zone"] == "Banff Yoho Kootenay"
+    assert av.attributes["center"] == "Parks Canada"
+    # US avalanche.org path must not be used for a CA resort.
+    mocks["avalanche"].assert_not_called()
+    mocks["avalanche_ca_meta"].assert_called()
+
+
+async def test_avalanche_unsupported_country_absent(hass: HomeAssistant):
+    """A non-US/CA resort with the toggle on reports nothing and hits no API."""
+    area_eu = {**AREA_CA, "country": "Austria", "cc": "AT"}
+    entry, mocks = await setup_area(
+        hass, area=area_eu, options={CONF_ENABLE_AVALANCHE: True}
+    )
+    assert _state(hass, entry, "avalanche_danger").state == "unavailable"
+    mocks["avalanche"].assert_not_called()
+    mocks["avalanche_ca_areas"].assert_not_called()
 
 
 async def test_avalanche_negative_cache(hass: HomeAssistant):

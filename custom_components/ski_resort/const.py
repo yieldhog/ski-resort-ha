@@ -17,7 +17,8 @@ OPEN_METEO_HOST = "api.open-meteo.com"
 CONDITIONS_HOST = "ski-resorts-and-conditions.p.rapidapi.com"  # skiapi (= Liftie)
 FORECAST_HOST = "ski-resort-forecast.p.rapidapi.com"  # optional RapidAPI snow
 NWS_HOST = "api.weather.gov"  # US weather alerts (public domain)
-AVALANCHE_HOST = "api.avalanche.org"  # US/intl avalanche danger (avalanche.org)
+AVALANCHE_HOST = "api.avalanche.org"  # US avalanche danger (avalanche.org)
+AVALANCHE_CA_HOST = "avcan-services-api.prod.avalanche.ca"  # Avalanche Canada
 # NWS requires a descriptive User-Agent on every request.
 NWS_USER_AGENT = "home-assistant-ski_resort (https://github.com/yieldhog/ski-resort-ha)"
 
