@@ -32,6 +32,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SkiResortConfigEntry
 from .const import (
+    CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
     CONF_RAPIDAPI_KEY,
@@ -134,7 +135,7 @@ async def async_setup_entry(
         entities.append(SkiResortLiftsPercentSensor(coordinator))
 
     # --- Reported snow (RapidAPI, optional) ---
-    if opts.get(CONF_RAPIDAPI_KEY) and opts.get("forecast_resort"):
+    if opts.get(CONF_RAPIDAPI_KEY) and opts.get(CONF_FORECAST_RESORT):
         entities.extend(
             (
                 SkiResortReportedSnowSensor(coordinator, "reported_summit_depth",

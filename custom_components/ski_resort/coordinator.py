@@ -255,7 +255,10 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         reported_total = sum(counts.values())
         osm_total = self.area.get("lifts") or 0
         total = osm_total or reported_total
-        pct = round(counts["open"] / total * 100) if total else None
+        # Clamp: Liftie's open count can briefly exceed OpenSkiMap's lift total
+        # (e.g. a newly added lift OpenSkiMap hasn't mapped yet), which would
+        # otherwise report >100% open.
+        pct = min(100, round(counts["open"] / total * 100)) if total else None
         return {**counts, "total": total, "percentage": pct, "source": source}
 
     # --- Enrichment (Wikidata photo/facts + skimap trail map) --------------

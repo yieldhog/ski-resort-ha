@@ -37,6 +37,12 @@ def test_shape_lifts_falls_back_to_reported_total():
     assert shaped["percentage"] == 50
 
 
+def test_shape_lifts_clamps_percentage_to_100():
+    # Liftie reports more open than OpenSkiMap's total -> cap at 100%.
+    shaped = C._shape_lifts(_coord(5), {"open": 8, "closed": 0}, "liftie")
+    assert shaped["percentage"] == 100
+
+
 def test_shape_lifts_non_numeric_counts():
     shaped = C._shape_lifts(_coord(10), {"open": "x", "closed": 1}, "liftie")
     assert shaped["open"] == 0
