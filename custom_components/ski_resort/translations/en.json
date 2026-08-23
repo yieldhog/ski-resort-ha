@@ -39,12 +39,12 @@
     "step": {
       "init": {
         "title": "Ski resort options",
-        "description": "Weather is free via Open-Meteo. Optionally add live lift status (self-hosted Liftie or a RapidAPI key), a RapidAPI snow-forecast, and the keyless NWS weather alerts and avalanche danger sources.",
+        "description": "Weather is free via Open-Meteo. Optionally add live lift status (self-hosted Liftie or a RapidAPI key), a RapidAPI snow-forecast, and the keyless, US-only NWS weather alerts and avalanche danger sources.",
         "data": {
           "scan_interval_minutes": "Update interval (minutes)",
           "units": "Units",
           "enable_alerts": "NWS weather alerts (US)",
-          "enable_avalanche": "Avalanche danger",
+          "enable_avalanche": "Avalanche danger (US)",
           "lift_slug": "Lift slug (Liftie/skiapi)",
           "liftie_base_url": "Self-hosted Liftie base URL (optional)",
           "rapidapi_key": "RapidAPI key (optional)",
@@ -54,7 +54,7 @@
         },
         "data_description": {
           "enable_alerts": "Add a binary sensor for active US National Weather Service alerts (winter storm warnings, etc.) at the resort. Keyless; US only.",
-          "enable_avalanche": "Add a sensor with the avalanche.org danger rating for the resort's forecast zone. Keyless; US and participating international centers.",
+          "enable_avalanche": "Add a sensor with the avalanche.org danger rating for the resort's forecast zone. Keyless; US only — avalanche.org covers US avalanche centers, not Canada (Avalanche Canada) or Europe.",
           "liftie_base_url": "Just the host and port of your self-hosted Liftie instance (its server root) — not the full /api/resort/... path. When set, lift status comes from Liftie instead of RapidAPI — completely free.",
           "rapidapi_key": "Enables skiapi lift status and the RapidAPI snow-forecast. Leave blank to stay fully free.",
           "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek.",
