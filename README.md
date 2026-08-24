@@ -98,7 +98,11 @@ key. The Liftie slug is filled in automatically when known.
   `http://homeassistant.local:3000`), **not** the `/api/resort/...` path. If set,
   lift status comes from your free Liftie instance. See
   [Self-hosted lift status](#self-hosted-lift-status-free) below.
-- **RapidAPI key** — enables skiapi lift status and the RapidAPI snow-forecast.
+- **RapidAPI key** — enables the RapidAPI snow-forecast, and skiapi lift status
+  only as a fallback. **A self-hosted Liftie URL always wins for lifts** — with
+  both set, lifts come from Liftie and the key is used solely for the
+  snow-forecast (no RapidAPI quota spent on lifts). The `lifts_open` sensor's
+  `source` attribute (`liftie`/`skiapi`) shows which is in use.
 - **RapidAPI snow-forecast resort name** — adds reported base/summit depth etc.
 - **RapidAPI snow refresh interval (hours)** — polls the metered snow-forecast
   source on its own slow cadence (default **12h**, independent of the main

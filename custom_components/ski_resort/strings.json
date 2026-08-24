@@ -56,7 +56,7 @@
           "enable_alerts": "Add a binary sensor for active US National Weather Service alerts (winter storm warnings, etc.) at the resort. Keyless; US only.",
           "enable_avalanche": "Add a sensor with the avalanche danger rating for the resort's forecast zone. Keyless; US (avalanche.org) and Canada (Avalanche Canada), chosen automatically by the resort's country. Europe isn't covered yet.",
           "liftie_base_url": "Just the host and port of your self-hosted Liftie instance (its server root) — not the full /api/resort/... path. When set, lift status comes from Liftie instead of RapidAPI — completely free.",
-          "rapidapi_key": "Enables skiapi lift status and the RapidAPI snow-forecast. Leave blank to stay fully free.",
+          "rapidapi_key": "Enables the RapidAPI snow-forecast — and skiapi lift status only as a fallback. When a self-hosted Liftie base URL is set, lifts come from Liftie and the key is used solely for the snow-forecast (no RapidAPI quota spent on lifts). Leave blank to stay fully free.",
           "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek.",
           "forecast_interval_hours": "How often to refresh the metered RapidAPI snow source, independent of the main update interval. Reported depths change ~daily, so a large value (default 12h ≈ 60 calls/month) keeps you inside free-tier quotas.",
           "webcam_url": "A direct link to a resort webcam still image (JPG/PNG/WebP), shown as an image entity. You can also paste an OpenSnow cam page URL (opensnow.com/location/.../cams/ID) and it's converted automatically. Some resorts block hotlinking."
