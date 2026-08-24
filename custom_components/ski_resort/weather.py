@@ -19,6 +19,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import SkiResortConfigEntry
 from .const import (
     DATA_WEATHER,
+    WX_APPARENT,
     WX_CONDITION,
     WX_DAILY,
     WX_GUST,
@@ -73,6 +74,11 @@ class SkiResortWeather(SkiResortEntity, WeatherEntity):
         return self._weather.get(WX_TEMP)
 
     @property
+    def native_apparent_temperature(self) -> float | None:
+        """Current apparent ("feels like") temperature (°C)."""
+        return self._weather.get(WX_APPARENT)
+
+    @property
     def native_wind_speed(self) -> float | None:
         """Current wind speed (km/h)."""
         return self._weather.get(WX_WIND)
@@ -98,6 +104,7 @@ class SkiResortWeather(SkiResortEntity, WeatherEntity):
                     condition=day.get("condition"),
                     native_temperature=day.get("temperature"),
                     native_templow=day.get("templow"),
+                    native_apparent_temperature=day.get("apparent_temperature"),
                     native_wind_speed=day.get("wind_speed"),
                     native_precipitation=day.get("precipitation"),
                 )

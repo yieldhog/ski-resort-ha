@@ -86,6 +86,7 @@ DATA_AVALANCHE = "avalanche"  # avalanche.org danger for the resort's zone (opti
 
 # Weather bundle sub-keys
 WX_TEMP = "temperature"
+WX_APPARENT = "apparent_temperature"  # "feels like" (wind chill + humidity + sun)
 WX_WIND = "wind_speed"
 WX_GUST = "wind_gust"
 WX_HUMIDITY = "humidity"

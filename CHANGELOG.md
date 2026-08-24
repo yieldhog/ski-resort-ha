@@ -10,6 +10,9 @@ New optional data sources and correctness fixes.
 ### Added
 - **5-day snow-forecast sensor** — total upcoming snowfall, with a per-day
   breakdown in the `daily` attribute (from Open-Meteo; no new fetch).
+- **"Feels like" sensor** — Open-Meteo apparent temperature (wind chill +
+  humidity + sun); the weather entity also gains current and daily-forecast
+  apparent temperature.
 - **NWS weather alerts** (opt-in, US, keyless) — a *Weather alert* binary
   sensor for active National Weather Service alerts at the resort, with
   headline / severity / expiry (and the full alert list) as attributes.

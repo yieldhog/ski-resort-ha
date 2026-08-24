@@ -125,12 +125,13 @@ async def async_open_meteo(
         "latitude": lat,
         "longitude": lon,
         "current": (
-            "temperature_2m,relative_humidity_2m,weather_code,"
-            "wind_speed_10m,wind_gusts_10m,snowfall"
+            "temperature_2m,apparent_temperature,relative_humidity_2m,"
+            "weather_code,wind_speed_10m,wind_gusts_10m,snowfall"
         ),
         "hourly": "snowfall,snow_depth,freezing_level_height",
         "daily": (
             "weather_code,temperature_2m_max,temperature_2m_min,"
+            "apparent_temperature_max,apparent_temperature_min,"
             "snowfall_sum,precipitation_sum,wind_speed_10m_max,"
             "wind_gusts_10m_max,sunrise,sunset"
         ),
