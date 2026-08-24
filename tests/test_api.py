@@ -158,6 +158,27 @@ async def test_avalanche_map_layer_center_path(hass):
     assert client2.get.call_args.args[0].endswith("/map-layer")
 
 
+async def test_avalanche_canada_clients(hass):
+    from custom_components.ski_resort.api import (
+        async_avalanche_ca_areas,
+        async_avalanche_ca_metadata,
+    )
+
+    patcher, client = _patch_get(hass, httpx.Response(200, json={"features": []}))
+    with patcher:
+        assert await async_avalanche_ca_areas(hass) == {"features": []}
+    assert client.get.call_args.args[0].endswith("/forecasts/en/areas")
+
+    patcher2, client2 = _patch_get(hass, httpx.Response(200, json=[{"area": {}}]))
+    with patcher2:
+        assert await async_avalanche_ca_metadata(hass) == [{"area": {}}]
+    assert client2.get.call_args.args[0].endswith("/forecasts/en/metadata")
+    # A non-list body degrades to an empty list.
+    patcher3, _ = _patch_get(hass, httpx.Response(200, json={"x": 1}))
+    with patcher3:
+        assert await async_avalanche_ca_metadata(hass) == []
+
+
 async def test_wikidata_item(hass):
     from custom_components.ski_resort.api import async_wikidata_item
 

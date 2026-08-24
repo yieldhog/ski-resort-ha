@@ -51,7 +51,8 @@ opened") from open data.
 | [Open-Meteo](https://open-meteo.com) | Weather + snow forecast | **CC-BY 4.0** |
 | [Liftie](https://github.com/pirxpilot/liftie) | Live lift status (self-hosted) | **BSD-3** |
 | [NWS](https://www.weather.gov/documentation/services-web-api) (api.weather.gov) | Weather alerts (US, optional) | **US public domain** |
-| [avalanche.org](https://github.com/NationalAvalancheCenter/Avalanche.org-Public-API-Docs) | Avalanche danger rating (optional) | free (gov/nonprofit) |
+| [avalanche.org](https://github.com/NationalAvalancheCenter/Avalanche.org-Public-API-Docs) | Avalanche danger rating (US, optional) | free (gov/nonprofit) |
+| [Avalanche Canada](https://avalanche.ca) | Avalanche danger rating (Canada, optional) | free |
 | RapidAPI *ski-resorts-and-conditions* / *ski-resort-forecast* | Optional lift status / snow-forecast | proprietary |
 
 The bundled index and Liftie crosswalk are derived data under ODbL/BSD; see
@@ -86,9 +87,12 @@ key. The Liftie slug is filled in automatically when known.
 - **Update interval** and **units** (imperial/metric).
 - **NWS weather alerts (US)** — opt-in; adds a *Weather alert* binary sensor
   (with the alert headline/severity/expiry as attributes) from the free NWS API.
-- **Avalanche danger** — opt-in; adds an *Avalanche danger* sensor with the
-  avalanche.org rating for the resort's forecast zone (level, zone, travel
-  advice, expiry, and forecast link as attributes). Keyless.
+- **Avalanche danger (US & Canada)** — opt-in; adds an *Avalanche danger*
+  sensor with the danger rating for the resort's forecast zone (level, zone,
+  travel advice, expiry, and forecast link as attributes). Keyless. The source
+  is chosen by the resort's country — **avalanche.org** in the US, **Avalanche
+  Canada** in Canada. Europe isn't covered yet; resorts outside a forecast zone
+  won't report.
 - **Lift slug** — auto-filled; override if the auto-map missed.
 - **Self-hosted Liftie base URL** — the **host and port only** (e.g.
   `http://homeassistant.local:3000`), **not** the `/api/resort/...` path. If set,
@@ -142,7 +146,7 @@ opens an automatic PR when upstream Liftie updates. See its
 | Resort information (status + links/facts) | sensor (diagnostic) | OpenSkiMap + Wikidata |
 | Trail map | image | skimap.org |
 | Webcam | image | your resort webcam URL (optional) |
-| Avalanche danger (rating + zone/advice/expiry) | sensor | avalanche.org (optional) |
+| Avalanche danger (rating + zone/advice/expiry) | sensor | avalanche.org / Avalanche Canada (optional, US & CA) |
 | Powder day | binary_sensor | Open-Meteo |
 | Resort open | binary_sensor | Liftie/skiapi (optional) |
 | Weather alert (active NWS alert + headline) | binary_sensor | NWS (optional, US) |

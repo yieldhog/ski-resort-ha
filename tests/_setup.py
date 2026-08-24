@@ -77,6 +77,27 @@ ALERTS = [
         "onset": "2026-01-25T00:00:00-07:00", "expires": "2026-01-25T18:00:00-07:00",
     }}
 ]
+# A Canadian ski area (for the Avalanche Canada path).
+AREA_CA = {**AREA, "id": "banffid", "name": "Sunshine Village", "country": "Canada",
+           "region": "Alberta", "cc": "CA", "lat": 51.0, "lon": -116.0}
+# Avalanche Canada region polygons + metadata (joined by area id).
+AVALANCHE_CA_AREAS = {
+    "type": "FeatureCollection",
+    "features": [{
+        "type": "Feature", "id": "ca-area-1",
+        "geometry": {"type": "MultiPolygon", "coordinates": [
+            [[[-117, 50], [-115, 50], [-115, 52], [-117, 52], [-117, 50]]]
+        ]},
+        "properties": {"id": "ca-area-1"},
+    }],
+}
+AVALANCHE_CA_META = [{
+    "area": {"id": "ca-area-1", "name": "Banff Yoho Kootenay"},
+    "highestDanger": {"value": "3", "display": "Considerable", "colour": "orange"},
+    "owner": {"display": "Parks Canada"},
+    "url": "https://avalanche.ca/forecasts/x",
+}]
+
 # A single zone polygon that contains Vail (lat 39.6, lon -106.35).
 AVALANCHE = {
     "type": "FeatureCollection",
@@ -101,7 +122,9 @@ async def setup_area(hass: HomeAssistant, options=None, *, om=OPEN_METEO,
                      liftie=LIFTIE, skiapi=SKIAPI, snow=SNOW, area=None,
                      om_error=None, lifts_error=None,
                      wikidata=WIKIDATA, trail_map=TRAIL_MAP_URL, info_error=None,
-                     alerts=ALERTS, avalanche=AVALANCHE):
+                     alerts=ALERTS, avalanche=AVALANCHE,
+                     avalanche_ca_areas=AVALANCHE_CA_AREAS,
+                     avalanche_ca_meta=AVALANCHE_CA_META):
     """Set up a ski-area entry with all api calls mocked; return (entry, mocks)."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -127,10 +150,15 @@ async def setup_area(hass: HomeAssistant, options=None, *, om=OPEN_METEO,
          patch("custom_components.ski_resort.coordinator.async_nws_alerts",
                new=AsyncMock(return_value=alerts)) as m_al, \
          patch("custom_components.ski_resort.coordinator.async_avalanche_map_layer",
-               new=AsyncMock(return_value=avalanche)) as m_av:
+               new=AsyncMock(return_value=avalanche)) as m_av, \
+         patch("custom_components.ski_resort.coordinator.async_avalanche_ca_areas",
+               new=AsyncMock(return_value=avalanche_ca_areas)) as m_caa, \
+         patch("custom_components.ski_resort.coordinator.async_avalanche_ca_metadata",
+               new=AsyncMock(return_value=avalanche_ca_meta)) as m_cam:
         mocks = {"om": m_om, "liftie": m_l, "skiapi": m_s, "snow": m_snow,
                  "wikidata": m_wd, "trail_map": m_tm, "alerts": m_al,
-                 "avalanche": m_av}
+                 "avalanche": m_av, "avalanche_ca_areas": m_caa,
+                 "avalanche_ca_meta": m_cam}
         await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
     return entry, mocks

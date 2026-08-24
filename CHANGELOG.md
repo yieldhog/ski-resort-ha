@@ -14,9 +14,10 @@ New optional data sources and correctness fixes.
   sensor for active National Weather Service alerts at the resort, with
   headline / severity / expiry (and the full alert list) as attributes.
 - **Avalanche danger** (opt-in, keyless) — an *Avalanche danger* enum sensor
-  with the avalanche.org rating for the resort's forecast zone, plus zone,
-  travel advice, expiry, and forecast link as attributes. Resorts in no zone
-  latch off so the global map-layer isn't re-fetched.
+  with the danger rating for the resort's forecast zone, plus zone, travel
+  advice, expiry, and forecast link as attributes. The source is chosen by the
+  resort's country: **avalanche.org** (US) or **Avalanche Canada** (CA). Resorts
+  with no coverage latch off so the region layers aren't re-fetched.
 - **Throttled RapidAPI snow** — the metered snow-forecast source now refreshes
   on its own slower cadence (`forecast_interval_hours`, default 12 h) so a
   bring-your-own key stays within free-tier quotas; the last reading is kept

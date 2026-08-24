@@ -91,6 +91,14 @@ def test_shape_alert_and_skip_empty():
     assert C._shape_alert({}) is None
 
 
+def test_ca_danger_normalization():
+    assert C._ca_danger("3") == (3, "considerable")
+    assert C._ca_danger(5) == (5, "extreme")
+    assert C._ca_danger("Considerable") == (3, "considerable")
+    assert C._ca_danger("offseason") == (-1, "no rating")
+    assert C._ca_danger(None) == (-1, "no rating")
+
+
 def test_match_zone_finds_containing_polygon():
     raw = {"features": [
         {"geometry": {"type": "Polygon", "coordinates":

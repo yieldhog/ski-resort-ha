@@ -21,6 +21,8 @@ from homeassistant.util import dt as dt_util
 
 from .api import (
     SkiResortError,
+    async_avalanche_ca_areas,
+    async_avalanche_ca_metadata,
     async_avalanche_map_layer,
     async_liftie,
     async_nws_alerts,
@@ -89,7 +91,8 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.area: dict[str, Any] = entry.data[CONF_AREA]
         self._prev_depth: float | None = None
         self._info: dict[str, Any] | None = None
-        self._av_center: str | None = None  # detected avalanche center id (cached)
+        self._av_center: str | None = None  # detected avalanche center id (US, cached)
+        self._av_area: str | None = None  # detected Avalanche Canada area id (cached)
         self._av_no_zone = False  # latched when the resort is in no forecast zone
         # Throttled RapidAPI snow: last-good reading + when it was last attempted.
         self._snow: dict[str, Any] | None = None
@@ -369,7 +372,31 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     # --- Avalanche danger (optional) --------------------------------------
     async def _fetch_avalanche(self, lat: float, lon: float) -> dict[str, Any] | None:
-        """Find the avalanche zone containing the resort and shape its danger.
+        """Dispatch to the avalanche provider for the resort's country.
+
+        avalanche.org covers the US; Avalanche Canada covers Canada. A resort in
+        an unsupported country, or in no forecast zone, latches off so we stop
+        re-fetching (zone geometry is static — a clean miss won't start matching).
+        A transient network error propagates instead (caught upstream), so it
+        doesn't latch.
+        """
+        cc = self.area.get("cc")
+        if cc == "US":
+            zone = await self._avalanche_us(lat, lon)
+        elif cc == "CA":
+            zone = await self._avalanche_ca(lat, lon)
+        else:
+            zone = None
+        if zone is None:
+            self._av_no_zone = True
+            _LOGGER.debug(
+                "No avalanche coverage for %s; disabling avalanche polling",
+                self.area.get("name"),
+            )
+        return zone
+
+    async def _avalanche_us(self, lat: float, lon: float) -> dict[str, Any] | None:
+        """avalanche.org: match the resort to a forecast zone and shape it.
 
         Uses a cached/configured center layer when known (smaller payload);
         otherwise fetches the global layer once to auto-detect the center.
@@ -382,14 +409,6 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             raw = await async_avalanche_map_layer(self.hass, None)
             zone = self._match_zone(raw, lat, lon)
         if zone is None:
-            # Zones are static, so a successful fetch that matches nothing means
-            # this resort has no avalanche coverage — latch it so we stop
-            # re-downloading the (large) global layer every poll.
-            self._av_no_zone = True
-            _LOGGER.debug(
-                "No avalanche zone contains %s; disabling avalanche polling",
-                self.area.get("name"),
-            )
             return None
         props = zone.get("properties") or {}
         self._av_center = props.get("center_id") or self._av_center
@@ -398,13 +417,65 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "rating": props.get("danger"),
             "zone": props.get("name"),
             "center": props.get("center"),
-            "center_id": props.get("center_id"),
             "expires": props.get("end_date"),
             "advice": props.get("travel_advice"),
             "link": props.get("link"),
-            "color": props.get("color"),
             "warning": bool(props.get("warning")),
         }
+
+    async def _avalanche_ca(self, lat: float, lon: float) -> dict[str, Any] | None:
+        """Avalanche Canada: match the region polygon, then read its danger.
+
+        The region polygons (``/areas``) are static, so the matched area id is
+        cached; only the small ``/metadata`` list is fetched thereafter.
+        """
+        area_id = self._av_area
+        if area_id is None:
+            areas = await async_avalanche_ca_areas(self.hass)
+            feature = self._match_zone(areas, lat, lon)
+            if feature is None:
+                return None
+            area_id = feature.get("id") or (feature.get("properties") or {}).get("id")
+            self._av_area = area_id
+        meta = await async_avalanche_ca_metadata(self.hass)
+        entry = next(
+            (m for m in meta if (m.get("area") or {}).get("id") == area_id), None
+        )
+        if entry is None:
+            return None
+        danger = entry.get("highestDanger") or {}
+        level, rating = self._ca_danger(danger.get("value"))
+        area = entry.get("area") or {}
+        return {
+            "level": level,
+            "rating": rating,
+            "zone": area.get("name"),
+            "center": (entry.get("owner") or {}).get("display"),
+            "expires": None,  # not in the metadata payload
+            "advice": None,
+            "link": entry.get("url"),
+            "warning": False,
+        }
+
+    @staticmethod
+    def _ca_danger(value: Any) -> tuple[int, str]:
+        """Normalize Avalanche Canada's danger value to (level, scale word).
+
+        Handles numeric levels ("1".."5"), rating words, and off-season states
+        ("offseason", "spring", "no-rating") which map to "no rating".
+        """
+        words = {1: "low", 2: "moderate", 3: "considerable", 4: "high", 5: "extreme"}
+        try:
+            level = int(value)
+        except (TypeError, ValueError):
+            level = 0
+        if level in words:
+            return level, words[level]
+        text = str(value or "").lower()
+        for lvl, word in words.items():
+            if word in text:
+                return lvl, word
+        return -1, "no rating"
 
     @staticmethod
     def _match_zone(
