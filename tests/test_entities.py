@@ -36,12 +36,20 @@ async def test_weather_entity(hass: HomeAssistant):
     wx = _state(hass, entry, "weather")
     assert wx.state == "snowy"  # wmo 73
     assert wx.attributes["temperature"] == -5.0
+    assert wx.attributes["apparent_temperature"] == -12.0  # feels like
     resp = await hass.services.async_call(
         "weather", "get_forecasts",
         {"entity_id": wx.entity_id, "type": "daily"},
         blocking=True, return_response=True,
     )
-    assert len(resp[wx.entity_id]["forecast"]) == 2
+    forecast = resp[wx.entity_id]["forecast"]
+    assert len(forecast) == 2
+    assert forecast[0]["apparent_temperature"] == -9.0  # daily feels-like high
+
+
+async def test_feels_like_sensor(hass: HomeAssistant):
+    entry, _ = await setup_area(hass)
+    assert _state(hass, entry, "feels_like").state == "-12.0"  # apparent temperature
 
 
 async def test_snow_and_terrain_sensors_imperial(hass: HomeAssistant):

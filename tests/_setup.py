@@ -36,7 +36,8 @@ TRAIL_MAP_URL = "https://files.skimap.org/trailmap507"
 
 OPEN_METEO = {
     "current": {
-        "temperature_2m": -5.0, "relative_humidity_2m": 80, "weather_code": 73,
+        "temperature_2m": -5.0, "apparent_temperature": -12.0,
+        "relative_humidity_2m": 80, "weather_code": 73,
         "wind_speed_10m": 12.0, "wind_gusts_10m": 25.0, "snowfall": 0.7,
     },
     "hourly": {
@@ -50,6 +51,8 @@ OPEN_METEO = {
         "weather_code": [73, 3],
         "temperature_2m_max": [-2.0, -1.0],
         "temperature_2m_min": [-8.0, -7.0],
+        "apparent_temperature_max": [-9.0, -8.0],
+        "apparent_temperature_min": [-15.0, -14.0],
         "snowfall_sum": [12.0, 3.0],
         "precipitation_sum": [8.0, 2.0],
         "wind_speed_10m_max": [20.0, 15.0],

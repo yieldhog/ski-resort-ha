@@ -16,6 +16,9 @@
       "temperature": {
         "default": "mdi:thermometer"
       },
+      "feels_like": {
+        "default": "mdi:thermometer-lines"
+      },
       "wind_speed": {
         "default": "mdi:weather-windy"
       },

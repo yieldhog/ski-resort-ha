@@ -51,6 +51,7 @@ from .const import (
     UNIT_IMPERIAL,
     UNIT_METRIC,
     WIKIDATA_PERMALINK,
+    WX_APPARENT,
     WX_DAILY,
     WX_FREEZING_LEVEL,
     WX_FRESH_SNOW,
@@ -96,6 +97,12 @@ async def async_setup_entry(
         SkiResortWeatherSensor(
             coordinator, "temperature", UnitOfTemperature.CELSIUS,
             lambda w: w.get(WX_TEMP),
+            device_class=SensorDeviceClass.TEMPERATURE,
+            state_class=SensorStateClass.MEASUREMENT,
+        ),
+        SkiResortWeatherSensor(
+            coordinator, "feels_like", UnitOfTemperature.CELSIUS,
+            lambda w: w.get(WX_APPARENT),
             device_class=SensorDeviceClass.TEMPERATURE,
             state_class=SensorStateClass.MEASUREMENT,
         ),

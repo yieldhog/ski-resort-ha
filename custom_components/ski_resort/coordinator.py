@@ -56,6 +56,7 @@ from .const import (
     DEFAULT_UNITS,
     DOMAIN,
     UNIT_IMPERIAL,
+    WX_APPARENT,
     WX_CONDITION,
     WX_DAILY,
     WX_FREEZING_LEVEL,
@@ -210,6 +211,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         return {
             WX_TEMP: current.get("temperature_2m"),
+            WX_APPARENT: current.get("apparent_temperature"),
             WX_WIND: current.get("wind_speed_10m"),
             WX_GUST: current.get("wind_gusts_10m"),
             WX_HUMIDITY: current.get("relative_humidity_2m"),
@@ -236,6 +238,8 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 "condition": condition_from_wmo(at("weather_code", i)),
                 "temperature": at("temperature_2m_max", i),
                 "templow": at("temperature_2m_min", i),
+                "apparent_temperature": at("apparent_temperature_max", i),
+                "apparent_temperature_low": at("apparent_temperature_min", i),
                 "wind_speed": at("wind_speed_10m_max", i),
                 "precipitation": at("precipitation_sum", i),
                 "snowfall_cm": at("snowfall_sum", i),

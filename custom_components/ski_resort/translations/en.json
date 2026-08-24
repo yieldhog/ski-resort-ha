@@ -84,6 +84,9 @@
       "temperature": {
         "name": "Temperature"
       },
+      "feels_like": {
+        "name": "Feels like"
+      },
       "wind_speed": {
         "name": "Wind speed"
       },
