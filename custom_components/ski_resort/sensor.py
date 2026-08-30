@@ -37,6 +37,7 @@ from .const import (
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
     CONF_RAPIDAPI_KEY,
+    DATA_ALERTS,
     DATA_AVALANCHE,
     DATA_INFO,
     DATA_LIFTS,
@@ -61,7 +62,12 @@ from .const import (
 )
 from .coordinator import SkiResortDataUpdateCoordinator
 from .entity import SkiResortEntity
-from .helpers import cm_to_display, m_to_depth_display, m_to_elev_display
+from .helpers import (
+    alert_attributes,
+    cm_to_display,
+    m_to_depth_display,
+    m_to_elev_display,
+)
 
 PARALLEL_UPDATES = 0
 
@@ -142,6 +148,10 @@ async def async_setup_entry(
     ):
         entities.append(SkiResortLiftsOpenSensor(coordinator))
         entities.append(SkiResortLiftsPercentSensor(coordinator))
+
+    # --- NWS weather alert (on by default, US resorts only) ---
+    if coordinator.alerts_enabled:
+        entities.append(SkiResortWeatherAlertSensor(coordinator))
 
     # --- Avalanche danger (optional) ---
     if opts.get(CONF_ENABLE_AVALANCHE):
@@ -520,6 +530,48 @@ class SkiResortInfoSensor(SkiResortEntity, SensorEntity):
         if area.get("sk") is not None:
             attrs["skimap_url"] = SKIMAP_PERMALINK.format(id=area["sk"])
         return attrs
+
+
+class SkiResortWeatherAlertSensor(SkiResortEntity, SensorEntity):
+    """Human-readable NWS weather alert for the resort (US only).
+
+    Companion to the ``weather_alert`` binary sensor: where that answers "is any
+    alert active?" (on/off) for automations, this sensor's *state* is the most
+    significant active alert's event name (e.g. "Flood Watch"), or "None" when
+    clear — so a dashboard shows what the alert is, not just "Unsafe". The full
+    headline, description, and instruction ride along as attributes.
+    """
+
+    _attr_translation_key = "weather_alert"
+    _attr_icon = "mdi:alert"
+
+    def __init__(self, coordinator: SkiResortDataUpdateCoordinator) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.entry.entry_id}_active_alert"
+
+    @property
+    def _alerts(self) -> dict[str, Any] | None:
+        return (self.coordinator.data or {}).get(DATA_ALERTS)
+
+    @property
+    def available(self) -> bool:
+        """Available only when the NWS query returned (even with zero alerts)."""
+        return super().available and self._alerts is not None
+
+    @property
+    def native_value(self) -> str | None:
+        """The top alert's event name, or "None" when nothing is active."""
+        alerts = self._alerts
+        if not alerts:
+            return None
+        items = alerts.get("alerts") or []
+        return items[0].get("event") if items else "None"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """Detail of the most significant alert plus a compact list."""
+        return alert_attributes(self._alerts)
 
 
 class SkiResortAvalancheSensor(SkiResortEntity, SensorEntity):

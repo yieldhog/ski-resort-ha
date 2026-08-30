@@ -123,6 +123,19 @@ async def test_weather_alert_and_avalanche_when_enabled(hass: HomeAssistant):
     assert alert.state == "on"
     assert alert.attributes["event"] == "Winter Storm Warning"
     assert alert.attributes["count"] == 1
+    # Enriched detail is now carried on the binary sensor.
+    assert alert.attributes["description"].startswith("Heavy snow")
+    assert alert.attributes["instruction"].startswith("Travel could be")
+    assert alert.attributes["certainty"] == "Likely"
+    assert alert.attributes["sender"] == "NWS Grand Junction CO"
+    # The compact list omits the verbose text to stay under the recorder limit.
+    assert "description" not in alert.attributes["alerts"][0]
+
+    # Companion text sensor: state is the human-readable event name.
+    alert_status = _state(hass, entry, "active_alert")
+    assert alert_status.state == "Winter Storm Warning"
+    assert alert_status.attributes["headline"] == "Winter Storm Warning until 6 PM MST"
+    assert alert_status.attributes["instruction"].startswith("Travel could be")
 
     av = _state(hass, entry, "avalanche_danger")
     assert av.state == "considerable"
@@ -177,7 +190,10 @@ async def test_avalanche_negative_cache(hass: HomeAssistant):
     ), patch(
         "custom_components.ski_resort.coordinator.async_avalanche_map_layer",
         new=AsyncMock(return_value=empty),
-    ) as m2:
+    ) as m2, patch(
+        "custom_components.ski_resort.coordinator.async_nws_alerts",
+        new=AsyncMock(return_value=[]),
+    ):
         await coordinator.async_refresh()
     assert m2.call_count == 0  # latched: no more (large) global fetches
 
@@ -197,10 +213,30 @@ async def test_avalanche_enum_guards_unknown_rating(hass: HomeAssistant):
     assert av.attributes["level"] == 9  # attributes still populated
 
 
-async def test_alerts_avalanche_absent_when_disabled(hass: HomeAssistant):
-    entry, _ = await setup_area(hass)  # both default off
-    assert _state(hass, entry, "weather_alert") is None
+async def test_alerts_enabled_by_default_for_us(hass: HomeAssistant):
+    """NWS alerts are on by default for a US resort (no option set)."""
+    entry, mocks = await setup_area(hass)  # default options
+    assert _state(hass, entry, "weather_alert").state == "on"
+    assert _state(hass, entry, "active_alert").state == "Winter Storm Warning"
+    mocks["alerts"].assert_called()
+    # Avalanche stays opt-in (default off).
     assert _state(hass, entry, "avalanche_danger") is None
+
+
+async def test_alerts_absent_when_disabled(hass: HomeAssistant):
+    """Explicitly turning the alerts option off removes both entities."""
+    entry, mocks = await setup_area(hass, options={CONF_ENABLE_ALERTS: False})
+    assert _state(hass, entry, "weather_alert") is None
+    assert _state(hass, entry, "active_alert") is None
+    mocks["alerts"].assert_not_called()
+
+
+async def test_alerts_absent_and_unfetched_for_non_us(hass: HomeAssistant):
+    """A non-US resort never fetches or exposes alerts, even on by default."""
+    entry, mocks = await setup_area(hass, area=AREA_CA)  # cc == "CA"
+    assert _state(hass, entry, "weather_alert") is None
+    assert _state(hass, entry, "active_alert") is None
+    mocks["alerts"].assert_not_called()  # NWS has no coverage outside the US
 
 
 async def test_weather_alert_off_when_none_active(hass: HomeAssistant):
@@ -208,6 +244,10 @@ async def test_weather_alert_off_when_none_active(hass: HomeAssistant):
     alert = _state(hass, entry, "weather_alert")
     assert alert.state == "off"  # queried OK, just nothing active
     assert alert.attributes["count"] == 0
+    # The text sensor reads "None" when clear (not "unknown"/"unavailable").
+    status = _state(hass, entry, "active_alert")
+    assert status.state == "None"
+    assert status.attributes["count"] == 0
 
 
 async def test_resort_info_sensor(hass: HomeAssistant):

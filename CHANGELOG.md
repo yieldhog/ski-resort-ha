@@ -3,6 +3,31 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-08-30
+
+Richer NWS weather alerts, on by default.
+
+### Changed
+- **NWS weather alerts are now on by default** (they're free, keyless, and US
+  public-domain), so US resorts get alert entities without opting in. They are
+  still only ever fetched for **US resorts** — a non-US resort makes no NWS call
+  and gets no alert entities — and the option can be turned off under
+  **Configure**.
+
+### Added
+- **Weather alert sensor** — a companion text sensor whose state is the most
+  significant active NWS alert's event name (e.g. `Flood Watch`), or `None` when
+  clear, so a dashboard shows *what* the alert is rather than the binary
+  sensor's device-class `Unsafe`. The binary sensor is now named *Weather alert
+  active* to distinguish the two.
+- **Full alert detail** — both alert entities now expose the alert's
+  `description` and `instruction` narrative plus `certainty`, `sender`, and
+  `message_type` (in addition to the existing headline / severity / urgency /
+  area / onset / expires). When several alerts are active they are sorted
+  most-significant first (by severity, then urgency), and the per-alert `alerts`
+  list is kept compact (no long text) so the state stays within Home
+  Assistant's recorder size limit.
+
 ## [1.1.0] - 2026-08-23
 
 New optional data sources and correctness fixes.

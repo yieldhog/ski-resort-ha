@@ -51,6 +51,7 @@ from .const import (
     DATA_LIFTS,
     DATA_SNOW,
     DATA_WEATHER,
+    DEFAULT_ENABLE_ALERTS,
     DEFAULT_FORECAST_INTERVAL_HOURS,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEFAULT_UNITS,
@@ -68,6 +69,7 @@ from .const import (
     WX_WIND,
 )
 from .helpers import (
+    alert_rank,
     condition_from_wmo,
     local_now_marker,
     parse_measure,
@@ -113,6 +115,17 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Whether display units are imperial."""
         return bool(self.entry.options.get(CONF_UNITS, DEFAULT_UNITS) == UNIT_IMPERIAL)
 
+    @property
+    def alerts_enabled(self) -> bool:
+        """Whether NWS weather alerts apply to this resort.
+
+        On by default (free, keyless), but only ever for US resorts — NWS has no
+        coverage elsewhere, so a non-US resort neither fetches nor exposes the
+        alert entities regardless of the toggle.
+        """
+        enabled = self.entry.options.get(CONF_ENABLE_ALERTS, DEFAULT_ENABLE_ALERTS)
+        return bool(enabled) and self.area.get("cc") == "US"
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch every section concurrently; each degrades independently.
 
@@ -133,7 +146,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         jobs[DATA_LIFTS] = self._fetch_lifts()
         if self._info is None:
             jobs[DATA_INFO] = self._fetch_info()
-        if opts.get(CONF_ENABLE_ALERTS) and lat is not None and lon is not None:
+        if self.alerts_enabled and lat is not None and lon is not None:
             jobs[DATA_ALERTS] = self._fetch_alerts(lat, lon)
         if (
             opts.get(CONF_ENABLE_AVALANCHE)
@@ -352,14 +365,25 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     # --- NWS weather alerts (optional) ------------------------------------
     async def _fetch_alerts(self, lat: float, lon: float) -> dict[str, Any]:
-        """Fetch active NWS alerts for the resort point (US only)."""
+        """Fetch active NWS alerts for the resort point (US only).
+
+        Alerts are sorted most-significant first (by severity, then urgency) so
+        the entities surface the worst active alert's detail when several are in
+        effect for one point.
+        """
         features = await async_nws_alerts(self.hass, lat, lon)
         alerts = [a for f in features if (a := self._shape_alert(f))]
+        alerts.sort(key=alert_rank, reverse=True)
         return {"count": len(alerts), "alerts": alerts}
 
     @staticmethod
     def _shape_alert(feature: dict[str, Any]) -> dict[str, Any] | None:
-        """Normalize one NWS alert feature to the fields the entity exposes."""
+        """Normalize one NWS alert feature to the fields the entities expose.
+
+        Keeps the full ``description`` and ``instruction`` narrative so a
+        dashboard can show what the alert says and what to do; the compacting
+        for the recorder happens in :func:`helpers.alert_attributes`.
+        """
         props = (feature or {}).get("properties") or {}
         event = props.get("event")
         if not event:
@@ -367,8 +391,13 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return {
             "event": event,
             "severity": props.get("severity"),
+            "certainty": props.get("certainty"),
             "urgency": props.get("urgency"),
             "headline": props.get("headline"),
+            "description": props.get("description"),
+            "instruction": props.get("instruction"),
+            "sender": props.get("senderName"),
+            "message_type": props.get("messageType"),
             "area": props.get("areaDesc"),
             "onset": props.get("onset") or props.get("effective"),
             "expires": props.get("expires") or props.get("ends"),

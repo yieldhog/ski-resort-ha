@@ -115,6 +115,11 @@ async def test_info_retries_after_transient_failure(hass: HomeAssistant):
     ), patch(
         "custom_components.ski_resort.coordinator.async_skimap_trailmap",
         new=AsyncMock(return_value=TRAIL_MAP_URL),
+    ), patch(
+        # Alerts are on by default for this US resort; stub the fetch so the
+        # refresh doesn't reach the (blocked) network.
+        "custom_components.ski_resort.coordinator.async_nws_alerts",
+        new=AsyncMock(return_value=[]),
     ):
         await coordinator.async_refresh()
 
@@ -150,7 +155,10 @@ async def test_rapidapi_snow_is_throttled(hass: HomeAssistant):
     ), patch(
         "custom_components.ski_resort.coordinator.async_rapidapi_snow",
         new=AsyncMock(return_value=SNOW),
-    ) as m_snow2:
+    ) as m_snow2, patch(
+        "custom_components.ski_resort.coordinator.async_nws_alerts",
+        new=AsyncMock(return_value=[]),
+    ):
         await coordinator.async_refresh()
 
     assert m_snow2.call_count == 0  # throttled

@@ -47,6 +47,7 @@ from .const import (
     CONF_SKI_AREA,
     CONF_UNITS,
     CONF_WEBCAM_URL,
+    DEFAULT_ENABLE_ALERTS,
     DEFAULT_FORECAST_INTERVAL_HOURS,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEFAULT_UNITS,
@@ -218,7 +219,7 @@ class SkiResortOptionsFlow(OptionsFlow):
                 ): vol.In(UNITS),
                 vol.Required(
                     CONF_ENABLE_ALERTS,
-                    default=opts.get(CONF_ENABLE_ALERTS, False),
+                    default=opts.get(CONF_ENABLE_ALERTS, DEFAULT_ENABLE_ALERTS),
                 ): bool,
                 vol.Required(
                     CONF_ENABLE_AVALANCHE,

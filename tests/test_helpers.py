@@ -120,3 +120,60 @@ def test_resolve_webcam_url():
     # direct URLs pass through unchanged
     assert resolve_webcam_url("https://cam.example/x.jpg") == "https://cam.example/x.jpg"
     assert resolve_webcam_url("") == ""
+
+
+def test_alert_rank_orders_by_severity_then_urgency():
+    from custom_components.ski_resort.helpers import alert_rank
+
+    extreme = {"severity": "Extreme", "urgency": "Immediate"}
+    severe = {"severity": "Severe", "urgency": "Expected"}
+    minor = {"severity": "Minor", "urgency": "Future"}
+    unknown = {"severity": "Bogus", "urgency": None}
+    ranked = sorted([minor, extreme, unknown, severe], key=alert_rank, reverse=True)
+    assert [a["severity"] for a in ranked] == ["Extreme", "Severe", "Minor", "Bogus"]
+    # Same severity -> urgency breaks the tie.
+    a = {"severity": "Severe", "urgency": "Immediate"}
+    b = {"severity": "Severe", "urgency": "Past"}
+    assert alert_rank(a) > alert_rank(b)
+
+
+def test_alert_attributes_surfaces_top_and_compacts_list():
+    from custom_components.ski_resort.helpers import alert_attributes
+
+    bundle = {
+        "count": 2,
+        "alerts": [
+            {"event": "Blizzard Warning", "severity": "Extreme", "urgency": "Immediate",
+             "certainty": "Observed", "headline": "Blizzard now",
+             "description": "A long narrative.", "instruction": "Stay home.",
+             "sender": "NWS", "area": "Eagle County", "message_type": "Alert",
+             "onset": "t0", "expires": "t1"},
+            {"event": "Wind Advisory", "severity": "Minor", "urgency": "Expected",
+             "description": "Windy.", "instruction": "Secure objects.",
+             "headline": "Wind", "onset": "t2", "expires": "t3"},
+        ],
+    }
+    attrs = alert_attributes(bundle)
+    # Top alert is surfaced in full, including the verbose text.
+    assert attrs["event"] == "Blizzard Warning"
+    assert attrs["description"] == "A long narrative."
+    assert attrs["instruction"] == "Stay home."
+    assert attrs["certainty"] == "Observed"
+    assert attrs["message_type"] == "Alert"
+    assert attrs["count"] == 2
+    # Every alert is listed compactly, with no verbose text in the list items.
+    assert len(attrs["alerts"]) == 2
+    assert attrs["alerts"][1]["event"] == "Wind Advisory"
+    assert "description" not in attrs["alerts"][0]
+    assert "instruction" not in attrs["alerts"][0]
+
+
+def test_alert_attributes_handles_empty_and_none():
+    from custom_components.ski_resort.helpers import alert_attributes
+
+    assert alert_attributes(None) is None
+    # Queried OK but nothing active -> a valid, empty-list payload.
+    empty = alert_attributes({"count": 0, "alerts": []})
+    assert empty["count"] == 0
+    assert empty["event"] is None
+    assert empty["alerts"] == []

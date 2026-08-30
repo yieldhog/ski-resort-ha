@@ -58,6 +58,9 @@
       "resort_info": {
         "default": "mdi:information-outline"
       },
+      "weather_alert": {
+        "default": "mdi:alert"
+      },
       "avalanche_danger": {
         "default": "mdi:alert"
       }
