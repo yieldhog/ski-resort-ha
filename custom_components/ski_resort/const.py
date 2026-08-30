@@ -48,7 +48,7 @@ CONF_FORECAST_INTERVAL_HOURS = "forecast_interval_hours"  # throttle RapidAPI sn
 CONF_LIFTIE_BASE_URL = "liftie_base_url"  # self-hosted Liftie base URL
 CONF_LIFT_SLUG = "lift_slug"  # Liftie/skiapi slug (auto from crosswalk)
 CONF_WEBCAM_URL = "webcam_url"  # optional direct still-image webcam URL
-CONF_ENABLE_ALERTS = "enable_alerts"  # US NWS weather alerts (opt-in)
+CONF_ENABLE_ALERTS = "enable_alerts"  # US NWS weather alerts (on by default, US)
 CONF_ENABLE_AVALANCHE = "enable_avalanche"  # avalanche.org danger (opt-in)
 CONF_AVALANCHE_CENTER = "avalanche_center"  # optional center id override (auto-detected)
 
@@ -68,6 +68,10 @@ DEPTH_UNIT = {UNIT_METRIC: "cm", UNIT_IMPERIAL: "in"}
 ELEV_UNIT = {UNIT_METRIC: "m", UNIT_IMPERIAL: "ft"}
 
 # --- Defaults --------------------------------------------------------------
+# NWS weather alerts are free, keyless, and US public-domain, so they're on by
+# default — but only ever fetched for US resorts (NWS has no coverage
+# elsewhere), so a worldwide resort makes no pointless call.
+DEFAULT_ENABLE_ALERTS = True
 DEFAULT_SCAN_INTERVAL_MINUTES = 180
 MIN_SCAN_INTERVAL_MINUTES = 60
 # The RapidAPI snow-forecast source is metered; poll it far less often than the

@@ -85,11 +85,13 @@ key. The Liftie slug is filled in automatically when known.
 **Configure** on the integration exposes:
 
 - **Update interval** and **units** (imperial/metric).
-- **NWS weather alerts (US)** — opt-in; adds a *Weather alert* sensor whose
-  state is the active alert's event name (e.g. `Flood Watch`, or `None` when
-  clear) with the headline, description, and instruction as attributes, plus a
-  *Weather alert active* binary sensor for automations — both from the free NWS
-  API. When several alerts are active the most significant is surfaced first.
+- **NWS weather alerts (US)** — **on by default** for US resorts (free, keyless;
+  turn off under **Configure**, and never fetched for non-US resorts). Adds a
+  *Weather alert* sensor whose state is the active alert's event name (e.g.
+  `Flood Watch`, or `None` when clear) with the headline, description, and
+  instruction as attributes, plus a *Weather alert active* binary sensor for
+  automations. When several alerts are active the most significant is surfaced
+  first.
 - **Avalanche danger (US & Canada)** — opt-in; adds an *Avalanche danger*
   sensor with the danger rating for the resort's forecast zone (level, zone,
   travel advice, expiry, and forecast link as attributes). Keyless. The source

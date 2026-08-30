@@ -17,7 +17,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SkiResortConfigEntry
 from .const import (
-    CONF_ENABLE_ALERTS,
     CONF_LIFT_SLUG,
     CONF_LIFTIE_BASE_URL,
     CONF_RAPIDAPI_KEY,
@@ -52,7 +51,7 @@ async def async_setup_entry(
     ):
         entities.append(SkiResortOpenSensor(coordinator))
 
-    if opts.get(CONF_ENABLE_ALERTS):
+    if coordinator.alerts_enabled:
         entities.append(SkiResortAlertSensor(coordinator))
 
     async_add_entities(entities)

@@ -32,7 +32,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import SkiResortConfigEntry
 from .const import (
-    CONF_ENABLE_ALERTS,
     CONF_ENABLE_AVALANCHE,
     CONF_FORECAST_RESORT,
     CONF_LIFT_SLUG,
@@ -150,8 +149,8 @@ async def async_setup_entry(
         entities.append(SkiResortLiftsOpenSensor(coordinator))
         entities.append(SkiResortLiftsPercentSensor(coordinator))
 
-    # --- NWS weather alert (optional) ---
-    if opts.get(CONF_ENABLE_ALERTS):
+    # --- NWS weather alert (on by default, US resorts only) ---
+    if coordinator.alerts_enabled:
         entities.append(SkiResortWeatherAlertSensor(coordinator))
 
     # --- Avalanche danger (optional) ---

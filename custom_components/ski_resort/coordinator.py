@@ -51,6 +51,7 @@ from .const import (
     DATA_LIFTS,
     DATA_SNOW,
     DATA_WEATHER,
+    DEFAULT_ENABLE_ALERTS,
     DEFAULT_FORECAST_INTERVAL_HOURS,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DEFAULT_UNITS,
@@ -114,6 +115,17 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Whether display units are imperial."""
         return bool(self.entry.options.get(CONF_UNITS, DEFAULT_UNITS) == UNIT_IMPERIAL)
 
+    @property
+    def alerts_enabled(self) -> bool:
+        """Whether NWS weather alerts apply to this resort.
+
+        On by default (free, keyless), but only ever for US resorts — NWS has no
+        coverage elsewhere, so a non-US resort neither fetches nor exposes the
+        alert entities regardless of the toggle.
+        """
+        enabled = self.entry.options.get(CONF_ENABLE_ALERTS, DEFAULT_ENABLE_ALERTS)
+        return bool(enabled) and self.area.get("cc") == "US"
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch every section concurrently; each degrades independently.
 
@@ -134,7 +146,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         jobs[DATA_LIFTS] = self._fetch_lifts()
         if self._info is None:
             jobs[DATA_INFO] = self._fetch_info()
-        if opts.get(CONF_ENABLE_ALERTS) and lat is not None and lon is not None:
+        if self.alerts_enabled and lat is not None and lon is not None:
             jobs[DATA_ALERTS] = self._fetch_alerts(lat, lon)
         if (
             opts.get(CONF_ENABLE_AVALANCHE)

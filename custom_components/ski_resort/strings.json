@@ -53,7 +53,7 @@
           "webcam_url": "Webcam image URL (optional)"
         },
         "data_description": {
-          "enable_alerts": "Add a binary sensor for active US National Weather Service alerts (winter storm warnings, etc.) at the resort. Keyless; US only.",
+          "enable_alerts": "On by default for US resorts (keyless): a Weather alert sensor (the active alert's name, with headline/description/instruction) plus a Weather alert active binary sensor. Never fetched outside the US.",
           "enable_avalanche": "Add a sensor with the avalanche danger rating for the resort's forecast zone. Keyless; US (avalanche.org) and Canada (Avalanche Canada), chosen automatically by the resort's country. Europe isn't covered yet.",
           "liftie_base_url": "Just the host and port of your self-hosted Liftie instance (its server root) — not the full /api/resort/... path. When set, lift status comes from Liftie instead of RapidAPI — completely free.",
           "rapidapi_key": "Enables the RapidAPI snow-forecast — and skiapi lift status only as a fallback. When a self-hosted Liftie base URL is set, lifts come from Liftie and the key is used solely for the snow-forecast (no RapidAPI quota spent on lifts). Leave blank to stay fully free.",

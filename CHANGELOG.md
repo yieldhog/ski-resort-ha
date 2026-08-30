@@ -5,7 +5,14 @@ to [Semantic Versioning](https://semver.org/).
 
 ## [1.2.0] - 2026-08-30
 
-Richer NWS weather alerts.
+Richer NWS weather alerts, on by default.
+
+### Changed
+- **NWS weather alerts are now on by default** (they're free, keyless, and US
+  public-domain), so US resorts get alert entities without opting in. They are
+  still only ever fetched for **US resorts** — a non-US resort makes no NWS call
+  and gets no alert entities — and the option can be turned off under
+  **Configure**.
 
 ### Added
 - **Weather alert sensor** — a companion text sensor whose state is the most
