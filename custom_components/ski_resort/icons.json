@@ -4,6 +4,9 @@
       "fresh_snow": {
         "default": "mdi:snowflake"
       },
+      "precipitation_24h": {
+        "default": "mdi:weather-rainy"
+      },
       "snow_depth": {
         "default": "mdi:snowflake-variant"
       },

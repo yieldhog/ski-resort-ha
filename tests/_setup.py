@@ -43,6 +43,7 @@ OPEN_METEO = {
     "hourly": {
         "time": [f"2026-01-25T{h:02d}:00" for h in range(24)],
         "snowfall": [1.0] * 24,
+        "precipitation": [0.5] * 24,  # mm/h -> 12 mm over 24h
         "snow_depth": [1.2] * 24,
         "freezing_level_height": [2500.0] * 24,
     },

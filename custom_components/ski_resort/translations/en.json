@@ -72,6 +72,9 @@
       "fresh_snow": {
         "name": "Fresh snowfall (24h)"
       },
+      "precipitation_24h": {
+        "name": "Precipitation (24h)"
+      },
       "snow_depth": {
         "name": "Snow depth"
       },

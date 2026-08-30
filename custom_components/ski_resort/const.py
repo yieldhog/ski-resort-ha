@@ -66,6 +66,10 @@ DEFAULT_UNITS = UNIT_IMPERIAL
 LENGTH_UNIT = {UNIT_METRIC: "cm", UNIT_IMPERIAL: "in"}
 DEPTH_UNIT = {UNIT_METRIC: "cm", UNIT_IMPERIAL: "in"}
 ELEV_UNIT = {UNIT_METRIC: "m", UNIT_IMPERIAL: "ft"}
+# Liquid precipitation is reported by Open-Meteo in mm; display as mm/in. The
+# strings match the HA UnitOfPrecipitationDepth members so the PRECIPITATION
+# device class validates them.
+PRECIP_UNIT = {UNIT_METRIC: "mm", UNIT_IMPERIAL: "in"}
 
 # --- Defaults --------------------------------------------------------------
 # NWS weather alerts are free, keyless, and US public-domain, so they're on by
@@ -96,6 +100,7 @@ WX_GUST = "wind_gust"
 WX_HUMIDITY = "humidity"
 WX_CONDITION = "condition"
 WX_FRESH_SNOW = "fresh_snow"  # next-24h snowfall
+WX_PRECIP = "precipitation"  # next-24h liquid precipitation (mm)
 WX_SNOW_DEPTH = "snow_depth"
 WX_FREEZING_LEVEL = "freezing_level"
 WX_DAILY = "daily"  # HA daily forecast list

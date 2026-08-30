@@ -42,6 +42,7 @@ _WMO_TO_CONDITION = {
 }
 
 _CM_PER_INCH = 2.54
+_MM_PER_INCH = 25.4
 _M_PER_FOOT = 0.3048
 
 
@@ -57,6 +58,13 @@ def cm_to_display(value: float | None, imperial: bool) -> float | None:
     if value is None:
         return None
     return round(value / _CM_PER_INCH, 1) if imperial else round(value, 1)
+
+
+def mm_to_display(value: float | None, imperial: bool) -> float | None:
+    """Convert a millimetre (liquid precip) value to inches when imperial."""
+    if value is None:
+        return None
+    return round(value / _MM_PER_INCH, 2) if imperial else round(value, 1)
 
 
 def m_to_depth_display(value: float | None, imperial: bool) -> float | None:
