@@ -216,3 +216,55 @@ def value_at_hour(
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return float(value)
     return None
+
+
+# --- NWS weather alerts ----------------------------------------------------
+# NWS CAP severity/urgency vocabularies, ranked so the most significant alert
+# sorts first when several are active for one point.
+_SEVERITY_RANK = {"extreme": 4, "severe": 3, "moderate": 2, "minor": 1}
+_URGENCY_RANK = {"immediate": 4, "expected": 3, "future": 2, "past": 1}
+
+# Fields carried per alert in the compact ``alerts`` attribute list. The verbose
+# ``description``/``instruction`` are deliberately excluded here (only the top
+# alert exposes them, above) to keep the state's attributes under HA's recorder
+# size limit when many alerts are active at once.
+_ALERT_SUMMARY_KEYS = ("event", "severity", "urgency", "headline", "onset", "expires")
+
+
+def alert_rank(alert: dict[str, Any]) -> tuple[int, int]:
+    """Sort key (severity, urgency) for an alert; higher is more significant."""
+    severity = _SEVERITY_RANK.get(str(alert.get("severity") or "").lower(), 0)
+    urgency = _URGENCY_RANK.get(str(alert.get("urgency") or "").lower(), 0)
+    return (severity, urgency)
+
+
+def alert_attributes(bundle: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Shape the alert bundle into entity state attributes.
+
+    The most significant alert (``alerts[0]``, pre-sorted by the coordinator)
+    is surfaced in full — including its ``description`` and ``instruction`` — so
+    a dashboard can show what the alert says and what to do. Every active alert
+    is also listed compactly under ``alerts`` (no long text) so the whole
+    attributes payload stays within the recorder's per-state size limit.
+    Returns ``None`` when the NWS query itself did not return.
+    """
+    if not bundle:
+        return None
+    items = bundle.get("alerts") or []
+    top = items[0] if items else {}
+    return {
+        "count": bundle.get("count", 0),
+        "event": top.get("event"),
+        "severity": top.get("severity"),
+        "certainty": top.get("certainty"),
+        "urgency": top.get("urgency"),
+        "headline": top.get("headline"),
+        "description": top.get("description"),
+        "instruction": top.get("instruction"),
+        "sender": top.get("sender"),
+        "area": top.get("area"),
+        "onset": top.get("onset"),
+        "expires": top.get("expires"),
+        "message_type": top.get("message_type"),
+        "alerts": [{k: a.get(k) for k in _ALERT_SUMMARY_KEYS} for a in items],
+    }

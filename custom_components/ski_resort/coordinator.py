@@ -68,6 +68,7 @@ from .const import (
     WX_WIND,
 )
 from .helpers import (
+    alert_rank,
     condition_from_wmo,
     local_now_marker,
     parse_measure,
@@ -352,14 +353,25 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     # --- NWS weather alerts (optional) ------------------------------------
     async def _fetch_alerts(self, lat: float, lon: float) -> dict[str, Any]:
-        """Fetch active NWS alerts for the resort point (US only)."""
+        """Fetch active NWS alerts for the resort point (US only).
+
+        Alerts are sorted most-significant first (by severity, then urgency) so
+        the entities surface the worst active alert's detail when several are in
+        effect for one point.
+        """
         features = await async_nws_alerts(self.hass, lat, lon)
         alerts = [a for f in features if (a := self._shape_alert(f))]
+        alerts.sort(key=alert_rank, reverse=True)
         return {"count": len(alerts), "alerts": alerts}
 
     @staticmethod
     def _shape_alert(feature: dict[str, Any]) -> dict[str, Any] | None:
-        """Normalize one NWS alert feature to the fields the entity exposes."""
+        """Normalize one NWS alert feature to the fields the entities expose.
+
+        Keeps the full ``description`` and ``instruction`` narrative so a
+        dashboard can show what the alert says and what to do; the compacting
+        for the recorder happens in :func:`helpers.alert_attributes`.
+        """
         props = (feature or {}).get("properties") or {}
         event = props.get("event")
         if not event:
@@ -367,8 +379,13 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         return {
             "event": event,
             "severity": props.get("severity"),
+            "certainty": props.get("certainty"),
             "urgency": props.get("urgency"),
             "headline": props.get("headline"),
+            "description": props.get("description"),
+            "instruction": props.get("instruction"),
+            "sender": props.get("senderName"),
+            "message_type": props.get("messageType"),
             "area": props.get("areaDesc"),
             "onset": props.get("onset") or props.get("effective"),
             "expires": props.get("expires") or props.get("ends"),

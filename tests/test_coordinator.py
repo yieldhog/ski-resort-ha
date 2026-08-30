@@ -83,12 +83,48 @@ def test_snow_due_throttle():
 
 def test_shape_alert_and_skip_empty():
     good = C._shape_alert(
-        {"properties": {"event": "Winter Storm Warning", "severity": "Severe"}}
+        {"properties": {
+            "event": "Winter Storm Warning", "severity": "Severe",
+            "certainty": "Likely", "urgency": "Expected", "messageType": "Alert",
+            "description": "Heavy snow.", "instruction": "Avoid travel.",
+            "senderName": "NWS Grand Junction CO", "areaDesc": "Eagle County",
+        }}
     )
     assert good["event"] == "Winter Storm Warning"
     assert good["severity"] == "Severe"
+    # The verbose fields the entities surface must be carried through.
+    assert good["description"] == "Heavy snow."
+    assert good["instruction"] == "Avoid travel."
+    assert good["certainty"] == "Likely"
+    assert good["sender"] == "NWS Grand Junction CO"
+    assert good["message_type"] == "Alert"
+    assert good["area"] == "Eagle County"
     assert C._shape_alert({"properties": {}}) is None  # no event -> dropped
     assert C._shape_alert({}) is None
+
+
+async def test_fetch_alerts_sorted_most_significant_first():
+    """Several active alerts are returned worst-first (severity, then urgency)."""
+    features = [
+        {"properties": {"event": "Winter Weather Advisory", "severity": "Minor",
+                        "urgency": "Expected"}},
+        {"properties": {"event": "Blizzard Warning", "severity": "Extreme",
+                        "urgency": "Immediate"}},
+        {"properties": {"event": "Wind Chill Warning", "severity": "Severe",
+                        "urgency": "Expected"}},
+    ]
+    c = MagicMock(spec=C)
+    c.hass = MagicMock()
+    c._shape_alert = C._shape_alert  # use the real static shaper
+    with patch(
+        "custom_components.ski_resort.coordinator.async_nws_alerts",
+        new=AsyncMock(return_value=features),
+    ):
+        bundle = await C._fetch_alerts(c, 39.6, -106.35)
+    assert bundle["count"] == 3
+    assert [a["event"] for a in bundle["alerts"]] == [
+        "Blizzard Warning", "Wind Chill Warning", "Winter Weather Advisory"
+    ]
 
 
 def test_ca_danger_normalization():

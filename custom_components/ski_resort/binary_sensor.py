@@ -28,6 +28,7 @@ from .const import (
 )
 from .coordinator import SkiResortDataUpdateCoordinator
 from .entity import SkiResortEntity
+from .helpers import alert_attributes
 
 # A "powder day" threshold: at least this much fresh snow (cm) forecast in 24h.
 POWDER_THRESHOLD_CM = 10.0
@@ -151,17 +152,5 @@ class SkiResortAlertSensor(SkiResortEntity, BinarySensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Headline of the first alert plus the full list."""
-        alerts = self._alerts
-        if not alerts:
-            return None
-        items = alerts.get("alerts") or []
-        first = items[0] if items else {}
-        return {
-            "count": alerts.get("count", 0),
-            "event": first.get("event"),
-            "headline": first.get("headline"),
-            "severity": first.get("severity"),
-            "expires": first.get("expires"),
-            "alerts": items,
-        }
+        """Detail of the most significant alert plus a compact list."""
+        return alert_attributes(self._alerts)

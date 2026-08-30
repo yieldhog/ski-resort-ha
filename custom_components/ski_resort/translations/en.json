@@ -126,6 +126,9 @@
       "resort_info": {
         "name": "Resort information"
       },
+      "weather_alert": {
+        "name": "Weather alert"
+      },
       "avalanche_danger": {
         "name": "Avalanche danger"
       }
@@ -138,7 +141,7 @@
         "name": "Resort open"
       },
       "weather_alert": {
-        "name": "Weather alert"
+        "name": "Weather alert active"
       }
     },
     "image": {

@@ -76,7 +76,11 @@ SNOW = {
 ALERTS = [
     {"properties": {
         "event": "Winter Storm Warning", "severity": "Severe", "urgency": "Expected",
+        "certainty": "Likely", "messageType": "Alert",
         "headline": "Winter Storm Warning until 6 PM MST", "areaDesc": "Eagle County",
+        "description": "Heavy snow expected. Total accumulations 12 to 18 inches.",
+        "instruction": "Travel could be very difficult. Avoid travel if possible.",
+        "senderName": "NWS Grand Junction CO",
         "onset": "2026-01-25T00:00:00-07:00", "expires": "2026-01-25T18:00:00-07:00",
     }}
 ]
