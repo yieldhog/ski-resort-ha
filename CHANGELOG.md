@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.2.1] - 2026-08-30
+
+Tell rain from snow.
+
+### Added
+- **Precipitation (24h) sensor** — total liquid precipitation over the next 24h
+  (Open-Meteo, no new key), so a warm, wet forecast reads correctly: meaningful
+  precipitation with little or no snowfall means rain (or snow only above the
+  freezing level), rather than looking like a broken snow sensor. The 5-day
+  *Snow forecast* sensor's `daily` attribute now also carries per-day
+  `precipitation` alongside `snowfall`.
+
 ## [1.2.0] - 2026-08-30
 
 Richer NWS weather alerts, on by default.

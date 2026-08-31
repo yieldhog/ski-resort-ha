@@ -147,7 +147,7 @@ opens an automatic PR when upstream Liftie updates. See its
 | Entity | Platform | Source |
 | --- | --- | --- |
 | Weather (current + daily forecast) | weather | Open-Meteo |
-| Fresh snowfall (24h) · Snow depth · Freezing level · Temperature · Wind | sensor | Open-Meteo |
+| Fresh snowfall (24h) · Precipitation (24h) · Snow depth · Freezing level · Temperature · Feels like · Wind | sensor | Open-Meteo |
 | Snow forecast (5-day total; per-day snowfall in the `daily` attribute) | sensor | Open-Meteo |
 | Lifts · Runs · Vertical drop · Summit / Base elevation | sensor | OpenSkiMap |
 | Lifts open · % open | sensor | Liftie/skiapi (optional) |
@@ -195,6 +195,12 @@ once and cached.
 - **Weather is missing.** Open-Meteo is keyless and global; a transient failure
   clears on the next poll. Persistent failure usually means outbound HTTPS is
   blocked on the HA host.
+- **Fresh snowfall is near zero but it's clearly wet out.** That's *rain*, not a
+  bug. Compare the **Precipitation (24h)** sensor (liquid) with **Fresh snowfall
+  (24h)** and the **Freezing level**: when the freezing level is above the
+  resort, the moisture falls as rain and snowfall stays ~0. The 5-day *Snow
+  forecast* sensor's `daily` attribute lists snow **and** precipitation per day
+  for the same reason.
 - **RapidAPI source `unavailable`.** The log will say `rate or quota limit
   reached (429)` when the plan's quota is spent — switch to the self-hosted
   Liftie add-on, or wait for the quota to reset.

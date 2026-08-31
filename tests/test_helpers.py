@@ -12,6 +12,7 @@ from custom_components.ski_resort.helpers import (
     local_now_marker,
     m_to_depth_display,
     m_to_elev_display,
+    mm_to_display,
     parse_measure,
     parse_snow_date,
     point_in_geometry,
@@ -177,3 +178,12 @@ def test_alert_attributes_handles_empty_and_none():
     assert empty["count"] == 0
     assert empty["event"] is None
     assert empty["alerts"] == []
+
+
+def test_mm_to_display():
+    # Imperial: mm -> inches, 2 dp (rain is small; 1 dp would erase it).
+    assert mm_to_display(12.0, imperial=True) == 0.47
+    assert mm_to_display(4.8, imperial=True) == 0.19
+    # Metric: mm as-is, 1 dp.
+    assert mm_to_display(12.0, imperial=False) == 12.0
+    assert mm_to_display(None, imperial=True) is None

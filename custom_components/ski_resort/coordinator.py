@@ -64,6 +64,7 @@ from .const import (
     WX_FRESH_SNOW,
     WX_GUST,
     WX_HUMIDITY,
+    WX_PRECIP,
     WX_SNOW_DEPTH,
     WX_TEMP,
     WX_WIND,
@@ -219,6 +220,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         times = hourly.get("time") or []
         now = local_now_marker(dt_util.utcnow(), raw.get("utc_offset_seconds"))
         fresh = sum_next_hours(times, hourly.get("snowfall") or [], 24, now)
+        precip = sum_next_hours(times, hourly.get("precipitation") or [], 24, now)
         depth = value_at_hour(times, hourly.get("snow_depth") or [], now)
         freezing = value_at_hour(times, hourly.get("freezing_level_height") or [], now)
 
@@ -230,6 +232,7 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             WX_HUMIDITY: current.get("relative_humidity_2m"),
             WX_CONDITION: condition_from_wmo(current.get("weather_code")),
             WX_FRESH_SNOW: fresh,  # cm, next 24h
+            WX_PRECIP: precip,  # mm liquid, next 24h
             WX_SNOW_DEPTH: depth,  # metres
             WX_FREEZING_LEVEL: freezing,  # metres
             WX_DAILY: self._shape_daily(daily),

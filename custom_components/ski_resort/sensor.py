@@ -47,6 +47,7 @@ from .const import (
     ELEV_UNIT,
     LENGTH_UNIT,
     OPENSKIMAP_PERMALINK,
+    PRECIP_UNIT,
     SKIMAP_PERMALINK,
     SNOW_FORECAST_DAYS,
     UNIT_IMPERIAL,
@@ -56,6 +57,7 @@ from .const import (
     WX_DAILY,
     WX_FREEZING_LEVEL,
     WX_FRESH_SNOW,
+    WX_PRECIP,
     WX_SNOW_DEPTH,
     WX_TEMP,
     WX_WIND,
@@ -67,6 +69,7 @@ from .helpers import (
     cm_to_display,
     m_to_depth_display,
     m_to_elev_display,
+    mm_to_display,
 )
 
 PARALLEL_UPDATES = 0
@@ -89,6 +92,16 @@ async def async_setup_entry(
             coordinator, "fresh_snow", length,
             lambda w: cm_to_display(w.get(WX_FRESH_SNOW), imperial),
             icon="mdi:snowflake", state_class=SensorStateClass.MEASUREMENT,
+        ),
+        # No PRECIPITATION device class on purpose: it would make HA convert the
+        # value to its own unit system, overriding this integration's imperial/
+        # metric option (the other weather sensors omit it for the same reason).
+        SkiResortWeatherSensor(
+            coordinator, "precipitation_24h",
+            PRECIP_UNIT[UNIT_IMPERIAL if imperial else UNIT_METRIC],
+            lambda w: mm_to_display(w.get(WX_PRECIP), imperial),
+            icon="mdi:weather-rainy",
+            state_class=SensorStateClass.MEASUREMENT,
         ),
         SkiResortWeatherSensor(
             coordinator, "snow_depth", depth,
@@ -263,12 +276,21 @@ class SkiResortSnowForecastSensor(SkiResortEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        """Per-day snowfall, one entry per forecast day."""
+        """Per-day snowfall and liquid precipitation, one entry per forecast day.
+
+        The ``precipitation`` figure makes a warm, wet forecast legible: a day
+        can show meaningful precipitation with little or no snowfall (rain, or
+        snow only above the freezing level), which otherwise reads as a
+        contradiction against the moisture people can see coming.
+        """
         return {
             "daily": [
                 {
                     "date": day.get("datetime"),
                     "snowfall": cm_to_display(day.get("snowfall_cm"), self._imperial),
+                    "precipitation": mm_to_display(
+                        day.get("precipitation"), self._imperial
+                    ),
                 }
                 for day in self._days
             ]

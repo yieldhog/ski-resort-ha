@@ -72,6 +72,21 @@ async def test_metric_units(hass: HomeAssistant):
     assert fresh.attributes["unit_of_measurement"] == "cm"
 
 
+async def test_precipitation_sensor(hass: HomeAssistant):
+    """24h liquid precipitation: distinct from snowfall, unit-aware."""
+    # Imperial: 12 mm over 24h -> 0.47 in.
+    entry, _ = await setup_area(hass)
+    precip = _state(hass, entry, "precipitation_24h")
+    assert precip.state == "0.47"
+    assert precip.attributes["unit_of_measurement"] == "in"
+
+    # Metric: reported as mm.
+    entry_m, _ = await setup_area(hass, options={CONF_UNITS: UNIT_METRIC})
+    precip_m = _state(hass, entry_m, "precipitation_24h")
+    assert precip_m.state == "12.0"
+    assert precip_m.attributes["unit_of_measurement"] == "mm"
+
+
 async def test_snow_forecast_sensor(hass: HomeAssistant):
     """5-day snow forecast: state is the total, `daily` carries each day."""
     entry, _ = await setup_area(hass)  # imperial; daily snowfall_sum [12.0, 3.0] cm
@@ -79,8 +94,9 @@ async def test_snow_forecast_sensor(hass: HomeAssistant):
     assert snow.state == "5.9"  # (4.7 + 1.2) in
     daily = snow.attributes["daily"]
     assert daily == [
-        {"date": "2026-01-25", "snowfall": 4.7},  # 12 cm -> in
-        {"date": "2026-01-26", "snowfall": 1.2},  # 3 cm -> in
+        # snowfall 12/3 cm -> in; precipitation 8/2 mm -> in
+        {"date": "2026-01-25", "snowfall": 4.7, "precipitation": 0.31},
+        {"date": "2026-01-26", "snowfall": 1.2, "precipitation": 0.08},
     ]
 
 
@@ -89,6 +105,7 @@ async def test_snow_forecast_sensor_metric(hass: HomeAssistant):
     snow = _state(hass, entry, "snow_forecast")
     assert snow.state == "15.0"  # 12 + 3 cm
     assert snow.attributes["daily"][0]["snowfall"] == 12.0
+    assert snow.attributes["daily"][0]["precipitation"] == 8.0  # mm, metric
     assert snow.attributes["unit_of_measurement"] == "cm"
 
 
