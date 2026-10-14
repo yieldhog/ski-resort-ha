@@ -15,7 +15,11 @@ MANUFACTURER = "OpenSkiMap"
 # --- Hosts -----------------------------------------------------------------
 OPEN_METEO_HOST = "api.open-meteo.com"
 CONDITIONS_HOST = "ski-resorts-and-conditions.p.rapidapi.com"  # skiapi (= Liftie)
-FORECAST_HOST = "ski-resort-forecast.p.rapidapi.com"  # optional RapidAPI snow
+SNOW_FORECAST_HOST = "www.snow-forecast.com"  # optional, keyless reported depths
+# snow-forecast.com serves the depths in plain HTML; send a descriptive UA.
+SNOW_FORECAST_USER_AGENT = (
+    "home-assistant-ski_resort (https://github.com/yieldhog/ski-resort-ha)"
+)
 NWS_HOST = "api.weather.gov"  # US weather alerts (public domain)
 AVALANCHE_HOST = "api.avalanche.org"  # US avalanche danger (avalanche.org)
 AVALANCHE_CA_HOST = "avcan-services-api.prod.avalanche.ca"  # Avalanche Canada
@@ -42,9 +46,9 @@ CONF_NAME = "name"
 # --- Options keys ----------------------------------------------------------
 CONF_UNITS = "units"
 CONF_SCAN_INTERVAL_MINUTES = "scan_interval_minutes"
-CONF_RAPIDAPI_KEY = "rapidapi_key"  # optional; unlocks RapidAPI snow + skiapi lifts
-CONF_FORECAST_RESORT = "forecast_resort"  # RapidAPI snow-forecast resort name
-CONF_FORECAST_INTERVAL_HOURS = "forecast_interval_hours"  # throttle RapidAPI snow polls
+CONF_RAPIDAPI_KEY = "rapidapi_key"  # optional; skiapi lift-status fallback
+CONF_FORECAST_RESORT = "forecast_resort"  # snow-forecast.com resort slug (keyless)
+CONF_FORECAST_INTERVAL_HOURS = "forecast_interval_hours"  # throttle snow-forecast scrapes
 CONF_LIFTIE_BASE_URL = "liftie_base_url"  # self-hosted Liftie base URL
 CONF_LIFT_SLUG = "lift_slug"  # Liftie/skiapi slug (auto from crosswalk)
 CONF_WEBCAM_URL = "webcam_url"  # optional direct still-image webcam URL
@@ -78,14 +82,14 @@ PRECIP_UNIT = {UNIT_METRIC: "mm", UNIT_IMPERIAL: "in"}
 DEFAULT_ENABLE_ALERTS = True
 DEFAULT_SCAN_INTERVAL_MINUTES = 180
 MIN_SCAN_INTERVAL_MINUTES = 60
-# The RapidAPI snow-forecast source is metered; poll it far less often than the
-# main coordinator (reported depths change ~daily) to stay under free quotas.
+# The snow-forecast.com scrape is polled far less often than the main
+# coordinator (reported depths change ~daily) to keep the scraping light.
 DEFAULT_FORECAST_INTERVAL_HOURS = 12
 MIN_FORECAST_INTERVAL_HOURS = 1
 
 # --- Coordinator data bundle keys ------------------------------------------
 DATA_WEATHER = "weather"
-DATA_SNOW = "snow"  # RapidAPI snow-forecast (optional)
+DATA_SNOW = "snow"  # snow-forecast.com reported depths (optional)
 DATA_LIFTS = "lifts"
 DATA_AREA = "area"
 DATA_INFO = "info"  # enrichment: photo, trail map, operator, opening year

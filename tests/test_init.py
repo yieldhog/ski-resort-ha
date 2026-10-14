@@ -126,26 +126,25 @@ async def test_info_retries_after_transient_failure(hass: HomeAssistant):
     assert coordinator.data[DATA_INFO].get("trail_map_url") == TRAIL_MAP_URL
 
 
-async def test_rapidapi_snow_is_throttled(hass: HomeAssistant):
-    """The metered RapidAPI snow source is fetched at most once per interval."""
+async def test_snow_forecast_is_throttled(hass: HomeAssistant):
+    """The snow-forecast.com source is fetched at most once per interval."""
     from unittest.mock import AsyncMock, patch
 
     from custom_components.ski_resort.const import (
         CONF_FORECAST_RESORT,
-        CONF_RAPIDAPI_KEY,
         DATA_SNOW,
     )
 
     from ._setup import LIFTIE, OPEN_METEO, SNOW
 
-    opts = {CONF_RAPIDAPI_KEY: "k", CONF_FORECAST_RESORT: "Vail"}
+    opts = {CONF_FORECAST_RESORT: "Vail"}  # keyless now
     entry, mocks = await setup_area(hass, options=opts)
     assert mocks["snow"].call_count == 1  # fetched once at first refresh
     coordinator = entry.runtime_data
     snow_before = coordinator.data[DATA_SNOW]
     assert snow_before is not None
 
-    # A poll within the interval must not re-hit RapidAPI, but keeps last-good.
+    # A poll within the interval must not re-scrape, but keeps last-good.
     with patch(
         "custom_components.ski_resort.coordinator.async_open_meteo",
         new=AsyncMock(return_value=OPEN_METEO),
@@ -153,7 +152,7 @@ async def test_rapidapi_snow_is_throttled(hass: HomeAssistant):
         "custom_components.ski_resort.coordinator.async_liftie",
         new=AsyncMock(return_value=LIFTIE),
     ), patch(
-        "custom_components.ski_resort.coordinator.async_rapidapi_snow",
+        "custom_components.ski_resort.coordinator.async_snow_forecast",
         new=AsyncMock(return_value=SNOW),
     ) as m_snow2, patch(
         "custom_components.ski_resort.coordinator.async_nws_alerts",

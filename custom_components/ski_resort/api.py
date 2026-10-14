@@ -7,7 +7,8 @@ sharing one retry/backoff helper:
 * Liftie (a self-hosted base URL) — free lift status, ``/api/resort/<slug>``.
 * skiapi (RapidAPI ``ski-resorts-and-conditions``) — the same Liftie data,
   proxied; needs a RapidAPI key.
-* RapidAPI snow-forecast — optional snow depths + 3-day prose summary.
+* snow-forecast.com — optional, keyless reported base/summit/fresh depth, scraped
+  from the resort's public page.
 
 Errors mirror what a coordinator wants: auth (key rejected) vs. connection
 (transport) vs. api (reached but errored, e.g. unknown resort).
@@ -29,13 +30,15 @@ from .const import (
     AVALANCHE_CA_HOST,
     AVALANCHE_HOST,
     CONDITIONS_HOST,
-    FORECAST_HOST,
     NWS_HOST,
     NWS_USER_AGENT,
     OPEN_METEO_HOST,
     SKIMAP_HOST,
+    SNOW_FORECAST_HOST,
+    SNOW_FORECAST_USER_AGENT,
     WIKIDATA_HOST,
 )
+from .helpers import parse_snow_forecast
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -173,19 +176,30 @@ async def async_skiapi(hass: HomeAssistant, key: str, slug: str) -> dict[str, An
     return data if isinstance(data, dict) else {}
 
 
-# --- RapidAPI snow-forecast (optional) -------------------------------------
-async def async_rapidapi_snow(
-    hass: HomeAssistant, key: str, resort: str, units: str
-) -> dict[str, Any]:
-    """Fetch RapidAPI snow-forecast ``/<resort>/snowConditions``."""
-    headers = {"X-RapidAPI-Key": key, "X-RapidAPI-Host": FORECAST_HOST}
-    data = await _get_json(
-        hass,
-        f"https://{FORECAST_HOST}/{quote(resort)}/snowConditions",
-        headers=headers,
-        params={"units": units},
-    )
-    return data if isinstance(data, dict) else {}
+# --- snow-forecast.com reported depths (optional, keyless) -----------------
+async def async_snow_forecast(hass: HomeAssistant, slug: str) -> dict[str, Any]:
+    """Scrape reported top/base/fresh depth + last-snowfall for a resort.
+
+    Reads ``snow-forecast.com/resorts/<slug>/6day/top`` (the top-station snow
+    report) and returns ``{top, base, fresh, last_snow}`` in centimetres. No API
+    key or quota. A transient network error raises ``SkiResortConnectionError``;
+    a non-200 or an unparseable page returns an empty mapping so the source
+    degrades to unavailable rather than breaking the entry.
+    """
+    client = get_async_client(hass)
+    url = f"https://{SNOW_FORECAST_HOST}/resorts/{quote(slug)}/6day/top"
+    try:
+        resp = await client.get(
+            url,
+            headers={"User-Agent": SNOW_FORECAST_USER_AGENT},
+            timeout=_TIMEOUT,
+            follow_redirects=True,
+        )
+    except (httpx.HTTPError, httpx.InvalidURL) as err:
+        raise SkiResortConnectionError(f"snow-forecast {slug}: {err}") from err
+    if resp.status_code >= 300:
+        return {}
+    return parse_snow_forecast(resp.text)
 
 
 # --- NWS weather alerts (US, public domain) --------------------------------

@@ -53,7 +53,8 @@ opened") from open data.
 | [NWS](https://www.weather.gov/documentation/services-web-api) (api.weather.gov) | Weather alerts (US, optional) | **US public domain** |
 | [avalanche.org](https://github.com/NationalAvalancheCenter/Avalanche.org-Public-API-Docs) | Avalanche danger rating (US, optional) | free (gov/nonprofit) |
 | [Avalanche Canada](https://avalanche.ca) | Avalanche danger rating (Canada, optional) | free |
-| RapidAPI *ski-resorts-and-conditions* / *ski-resort-forecast* | Optional lift status / snow-forecast | proprietary |
+| [snow-forecast.com](https://www.snow-forecast.com) | Reported base/summit/fresh depth (optional, keyless) | © Snow-Forecast.com |
+| RapidAPI *ski-resorts-and-conditions* | Optional lift-status fallback (skiapi = Liftie data) | proprietary |
 
 The bundled index and Liftie crosswalk are derived data under ODbL/BSD; see
 [`custom_components/ski_resort/data/NOTICE.md`](custom_components/ski_resort/data/NOTICE.md).
@@ -103,16 +104,18 @@ key. The Liftie slug is filled in automatically when known.
   `http://homeassistant.local:3000`), **not** the `/api/resort/...` path. If set,
   lift status comes from your free Liftie instance. See
   [Self-hosted lift status](#self-hosted-lift-status-free) below.
-- **RapidAPI key** — enables the RapidAPI snow-forecast, and skiapi lift status
-  only as a fallback. **A self-hosted Liftie URL always wins for lifts** — with
-  both set, lifts come from Liftie and the key is used solely for the
-  snow-forecast (no RapidAPI quota spent on lifts). The `lifts_open` sensor's
-  `source` attribute (`liftie`/`skiapi`) shows which is in use.
-- **RapidAPI snow-forecast resort name** — adds reported base/summit depth etc.
-- **RapidAPI snow refresh interval (hours)** — polls the metered snow-forecast
-  source on its own slow cadence (default **12h**, independent of the main
-  update interval) so a bring-your-own key stays inside free-tier quotas;
-  the last reading is kept between refreshes.
+- **RapidAPI key** — optional, and only a **fallback for lift status** (skiapi,
+  the same Liftie data proxied) when no self-hosted Liftie URL is set. **A
+  self-hosted Liftie URL always wins for lifts.** Not needed for anything else.
+  The `lifts_open` sensor's `source` attribute (`liftie`/`skiapi`) shows which
+  is in use.
+- **snow-forecast.com resort name** — **keyless**; adds reported base/summit/fresh
+  depth and last-snowfall date. Enter the resort's snow-forecast.com slug (the
+  `<slug>` in `snow-forecast.com/resorts/<slug>/`), e.g. `Vail` or `Beaver-Creek`.
+- **Snow refresh interval (hours)** — polls snow-forecast.com on its own slow
+  cadence (default **12h**, independent of the main update interval); reported
+  depths change ~daily, so this keeps the scraping light. The last reading is
+  kept between refreshes.
 - **Webcam image URL** — a direct still-image link to a resort webcam, shown as an `image` entity. You can also paste an **OpenSnow cam page URL** (`opensnow.com/location/.../cams/ID`) and it's converted automatically. Some resorts block hotlinking.
 
 > **Lift status is optional.** liftie.info's public API is Cloudflare-protected
@@ -151,7 +154,7 @@ opens an automatic PR when upstream Liftie updates. See its
 | Snow forecast (5-day total; per-day snowfall in the `daily` attribute) | sensor | Open-Meteo |
 | Lifts · Runs · Vertical drop · Summit / Base elevation | sensor | OpenSkiMap |
 | Lifts open · % open | sensor | Liftie/skiapi (optional) |
-| Reported summit/base depth · fresh snow · last snowfall date | sensor | RapidAPI (optional) |
+| Reported summit/base depth · fresh snow · last snowfall date | sensor | snow-forecast.com (optional, keyless) |
 | Resort information (status + links/facts) | sensor (diagnostic) | OpenSkiMap + Wikidata |
 | Trail map | image | skimap.org |
 | Webcam | image | your resort webcam URL (optional) |
@@ -180,8 +183,9 @@ once and cached.
 - **Lift total vs. open source.** The lift *total* comes from OpenSkiMap
   (authoritative); *open* count comes from Liftie, so the two can occasionally
   disagree (e.g. a resort adds a lift OpenSkiMap hasn't mapped yet).
-- **RapidAPI is metered.** The optional RapidAPI sources have request quotas;
-  the self-hosted Liftie add-on avoids this entirely.
+- **Reported depths need a snow report.** The *Reported …* depth sensors read
+  snow-forecast.com; a closed resort with no current report simply shows nothing
+  until the mountain reports a base.
 - **Bundled resort index.** Search covers the resorts in the bundled OpenSkiMap
   snapshot; regenerate it (below) to pick up newly added areas.
 
@@ -201,9 +205,9 @@ once and cached.
   resort, the moisture falls as rain and snowfall stays ~0. The 5-day *Snow
   forecast* sensor's `daily` attribute lists snow **and** precipitation per day
   for the same reason.
-- **RapidAPI source `unavailable`.** The log will say `rate or quota limit
-  reached (429)` when the plan's quota is spent — switch to the self-hosted
-  Liftie add-on, or wait for the quota to reset.
+- **Reported depth sensors `unavailable`.** Check the **snow-forecast.com resort
+  name** matches the slug in `snow-forecast.com/resorts/<slug>/`. Off-season, a
+  closed resort has no reported base, so these stay blank until it opens.
 - **Webcam not showing.** Confirm the URL returns an image directly (some
   resorts block hotlinking). OpenSnow cam *page* URLs are auto-converted.
 

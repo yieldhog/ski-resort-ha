@@ -13,8 +13,8 @@ from custom_components.ski_resort.helpers import (
     m_to_depth_display,
     m_to_elev_display,
     mm_to_display,
-    parse_measure,
     parse_snow_date,
+    parse_snow_forecast,
     point_in_geometry,
     sum_next_hours,
     value_at_hour,
@@ -44,13 +44,24 @@ def test_depth_and_elev_display():
     assert m_to_elev_display(None, imperial=True) is None
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [("83in", 83.0), ("210 cm", 210.0), (12, 12.0), (None, None),
-     ("n/a", None), (True, None)],
-)
-def test_parse_measure(value, expected):
-    assert parse_measure(value) == expected
+def test_parse_snow_forecast():
+    html = (
+        '<table class="snow-depths-table__table"><tbody>'
+        "<tr><th>Top snow depth:</th><td>49&thinsp;cm</td></tr>"
+        "<tr><th>Bottom snow depth:</th><td>—</td></tr>"
+        "<tr><th>Fresh snowfall depth:</th><td>19 in</td></tr>"  # served inches
+        "<tr><th>Last snowfall:</th><td>8 Oct 2026</td></tr>"
+        "</tbody></table>"
+    )
+    out = parse_snow_forecast(html)
+    assert out["top"] == 49.0  # cm
+    assert out["base"] is None  # "—" -> no value
+    assert out["fresh"] == round(19 * 2.54, 1)  # inches normalised to cm
+    assert out["last_snow"] == "8 Oct 2026"
+    # No table / junk degrades to all-None, never raises.
+    assert parse_snow_forecast("<html>nothing here</html>") == {
+        "top": None, "base": None, "fresh": None, "last_snow": None,
+    }
 
 
 def test_parse_snow_date():

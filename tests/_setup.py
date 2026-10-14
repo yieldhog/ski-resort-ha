@@ -70,9 +70,10 @@ SKIAPI = {"data": {"lifts": {"stats": {
     "open": 10, "hold": 1, "scheduled": 2, "closed": 3,
     "percentage": {"open": 63},
 }}}}
+# Parsed snow-forecast.com depths (cm) as async_snow_forecast returns them;
+# the coordinator converts to display units. 210.82/101.6/12.7 cm = 83/40/5 in.
 SNOW = {
-    "freshSnowfall": "5in", "topSnowDepth": "83in",
-    "botSnowDepth": "40in", "lastSnowfallDate": "25 Jan 2026",
+    "top": 210.82, "base": 101.6, "fresh": 12.7, "last_snow": "25 Jan 2026",
 }
 ALERTS = [
     {"properties": {
@@ -149,7 +150,7 @@ async def setup_area(hass: HomeAssistant, options=None, *, om=OPEN_METEO,
                new=AsyncMock(return_value=liftie, side_effect=lifts_error)) as m_l, \
          patch("custom_components.ski_resort.coordinator.async_skiapi",
                new=AsyncMock(return_value=skiapi, side_effect=lifts_error)) as m_s, \
-         patch("custom_components.ski_resort.coordinator.async_rapidapi_snow",
+         patch("custom_components.ski_resort.coordinator.async_snow_forecast",
                new=AsyncMock(return_value=snow)) as m_snow, \
          patch("custom_components.ski_resort.coordinator.async_wikidata_item",
                new=AsyncMock(return_value=wikidata, side_effect=info_error)) as m_wd, \

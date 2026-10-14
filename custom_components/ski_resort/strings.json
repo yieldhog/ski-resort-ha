@@ -39,7 +39,7 @@
     "step": {
       "init": {
         "title": "Ski resort options",
-        "description": "Weather is free via Open-Meteo. Optionally add live lift status (self-hosted Liftie or a RapidAPI key), a RapidAPI snow-forecast, keyless US NWS weather alerts, and keyless avalanche danger (US & Canada).",
+        "description": "Weather is free via Open-Meteo. Optionally add live lift status (self-hosted Liftie or a RapidAPI key), keyless reported depths from snow-forecast.com, keyless US NWS weather alerts, and keyless avalanche danger (US & Canada).",
         "data": {
           "scan_interval_minutes": "Update interval (minutes)",
           "units": "Units",
@@ -48,7 +48,7 @@
           "lift_slug": "Lift slug (Liftie/skiapi)",
           "liftie_base_url": "Self-hosted Liftie base URL (optional)",
           "rapidapi_key": "RapidAPI key (optional)",
-          "forecast_resort": "RapidAPI snow-forecast resort name (optional)",
+          "forecast_resort": "snow-forecast.com resort name (optional)",
           "forecast_interval_hours": "RapidAPI snow refresh interval (hours)",
           "webcam_url": "Webcam image URL (optional)"
         },
@@ -56,9 +56,9 @@
           "enable_alerts": "On by default for US resorts (keyless): a Weather alert sensor (the active alert's name, with headline/description/instruction) plus a Weather alert active binary sensor. Never fetched outside the US.",
           "enable_avalanche": "Add a sensor with the avalanche danger rating for the resort's forecast zone. Keyless; US (avalanche.org) and Canada (Avalanche Canada), chosen automatically by the resort's country. Europe isn't covered yet.",
           "liftie_base_url": "Just the host and port of your self-hosted Liftie instance (its server root) — not the full /api/resort/... path. When set, lift status comes from Liftie instead of RapidAPI — completely free.",
-          "rapidapi_key": "Enables the RapidAPI snow-forecast — and skiapi lift status only as a fallback. When a self-hosted Liftie base URL is set, lifts come from Liftie and the key is used solely for the snow-forecast (no RapidAPI quota spent on lifts). Leave blank to stay fully free.",
-          "forecast_resort": "The snow-forecast resort name (needs a RapidAPI key), e.g. Vail or Beaver-Creek.",
-          "forecast_interval_hours": "How often to refresh the metered RapidAPI snow source, independent of the main update interval. Reported depths change ~daily, so a large value (default 12h ≈ 60 calls/month) keeps you inside free-tier quotas.",
+          "rapidapi_key": "Enables skiapi lift status (the same Liftie data, proxied) as a fallback when no self-hosted Liftie base URL is set. Not used for anything else. Leave blank to stay fully free.",
+          "forecast_resort": "The snow-forecast.com resort slug — the <slug> in snow-forecast.com/resorts/<slug>/ — e.g. Vail or Beaver-Creek. Keyless; adds reported base/summit/fresh depth.",
+          "forecast_interval_hours": "How often to refresh the snow-forecast.com reported depths, independent of the main update interval. They change ~daily, so the default (12h) is plenty and keeps the scraping light.",
           "webcam_url": "A direct link to a resort webcam still image (JPG/PNG/WebP), shown as an image entity. You can also paste an OpenSnow cam page URL (opensnow.com/location/.../cams/ID) and it's converted automatically. Some resorts block hotlinking."
         }
       }

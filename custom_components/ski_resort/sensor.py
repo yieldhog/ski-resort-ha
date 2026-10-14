@@ -170,8 +170,8 @@ async def async_setup_entry(
     if opts.get(CONF_ENABLE_AVALANCHE):
         entities.append(SkiResortAvalancheSensor(coordinator))
 
-    # --- Reported snow (RapidAPI, optional) ---
-    if opts.get(CONF_RAPIDAPI_KEY) and opts.get(CONF_FORECAST_RESORT):
+    # --- Reported snow (snow-forecast.com, keyless, optional) ---
+    if opts.get(CONF_FORECAST_RESORT):
         entities.extend(
             (
                 SkiResortReportedSnowSensor(coordinator, "reported_summit_depth",
@@ -449,7 +449,7 @@ class SkiResortLiftsPercentSensor(SkiResortEntity, SensorEntity):
 
 
 class SkiResortReportedSnowSensor(SkiResortEntity, SensorEntity):
-    """A depth/snow value reported by the optional RapidAPI snow-forecast."""
+    """A depth/snow value reported by the optional snow-forecast.com source."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_icon = "mdi:snowflake-alert"
@@ -484,7 +484,7 @@ class SkiResortReportedSnowSensor(SkiResortEntity, SensorEntity):
 
 
 class SkiResortLastSnowDateSensor(SkiResortEntity, SensorEntity):
-    """Last snowfall date reported by the RapidAPI snow-forecast."""
+    """Last snowfall date reported by snow-forecast.com."""
 
     _attr_translation_key = "last_snow_date"
     _attr_icon = "mdi:calendar"

@@ -3,6 +3,22 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-10-14
+
+Reported depths, now keyless.
+
+### Changed
+- **Reported base/summit/fresh depth + last snowfall now come from
+  snow-forecast.com directly — no API key, no quota.** They previously used the
+  RapidAPI *ski-resort-forecast* product, whose backend began returning HTTP 500
+  for every resort (open or closed). The integration now reads the same figures
+  from the resort's public snow-forecast.com page, so the four *Reported …*
+  sensors work for free and under our control. The **RapidAPI key is no longer
+  needed for snow** (it still enables skiapi lift status as a fallback when no
+  self-hosted Liftie URL is set), and the existing *snow-forecast resort name*
+  option is now simply the snow-forecast.com slug (e.g. `Vail`). The source is
+  still throttled (default 12h) to keep the scraping light.
+
 ## [1.2.1] - 2026-08-30
 
 Tell rain from snow.
