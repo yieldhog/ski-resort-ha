@@ -16,6 +16,7 @@ from custom_components.ski_resort.helpers import (
     parse_snow_date,
     parse_snow_forecast,
     point_in_geometry,
+    snow_forecast_slug,
     sum_next_hours,
     value_at_hour,
 )
@@ -62,6 +63,16 @@ def test_parse_snow_forecast():
     assert parse_snow_forecast("<html>nothing here</html>") == {
         "top": None, "base": None, "fresh": None, "last_snow": None,
     }
+
+
+def test_snow_forecast_slug():
+    assert snow_forecast_slug("Vail") == "Vail"
+    assert snow_forecast_slug("Beaver Creek") == "Beaver-Creek"
+    assert snow_forecast_slug("Sölden") == "Solden"  # diacritics folded
+    assert snow_forecast_slug("Jackson Hole!") == "Jackson-Hole"  # punctuation dropped
+    assert snow_forecast_slug("") is None
+    assert snow_forecast_slug(None) is None
+    assert snow_forecast_slug("—") is None  # nothing usable
 
 
 def test_parse_snow_date():

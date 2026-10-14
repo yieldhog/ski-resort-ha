@@ -3,6 +3,21 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-10-14
+
+Reported depths now configure themselves.
+
+### Added
+- **Auto-resolved snow-forecast.com slug.** At setup the integration now derives
+  the resort's snow-forecast.com slug from its name (folding accents, e.g.
+  `Sölden` → `Solden`) and **validates it against the live site**, storing it
+  only when the page actually parses — so the four *Reported …* depth sensors
+  work out of the box without hunting for a slug, the same way the Liftie lift
+  slug already auto-fills. The *snow-forecast resort name* option becomes an
+  override for the rare auto-match miss. Every source now self-derives from the
+  one OpenSkiMap identity (coords for weather/alerts, the Liftie crosswalk for
+  lifts, and now snow-forecast.com for reported depth).
+
 ## [1.3.0] - 2026-10-14
 
 Reported depths, now keyless.

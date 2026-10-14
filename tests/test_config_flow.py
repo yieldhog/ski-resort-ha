@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
@@ -49,6 +49,9 @@ async def test_full_flow(hass: HomeAssistant):
     p1, p2, p3, p4 = _patch_data()
     with p1, p2, p3, p4, patch(
         "custom_components.ski_resort.async_setup_entry", return_value=True
+    ), patch(
+        "custom_components.ski_resort.config_flow.async_resolve_snow_forecast",
+        new=AsyncMock(return_value="Vail"),
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -66,6 +69,7 @@ async def test_full_flow(hass: HomeAssistant):
     assert result["data"]["id"] == "vailid"
     assert result["options"][CONF_LIFT_SLUG] == "vail"
     assert result["options"][CONF_UNITS] == UNIT_IMPERIAL
+    assert result["options"][CONF_FORECAST_RESORT] == "Vail"  # auto-resolved
 
 
 async def test_no_results(hass: HomeAssistant):
@@ -87,6 +91,9 @@ async def test_name_override_and_bare_label(hass: HomeAssistant):
     p1, p2, p3, p4 = _patch_data(matches=(BARE,), area=BARE, slug=None)
     with p1, p2, p3, p4, patch(
         "custom_components.ski_resort.async_setup_entry", return_value=True
+    ), patch(
+        "custom_components.ski_resort.config_flow.async_resolve_snow_forecast",
+        new=AsyncMock(return_value=None),  # not on snow-forecast.com
     ):
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -99,6 +106,7 @@ async def test_name_override_and_bare_label(hass: HomeAssistant):
         )
     assert result["title"] == "My hill"
     assert result["options"][CONF_LIFT_SLUG] == ""
+    assert CONF_FORECAST_RESORT not in result["options"]  # unresolved -> omitted
 
 
 async def test_duplicate_aborts(hass: HomeAssistant):

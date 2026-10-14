@@ -110,7 +110,9 @@ key. The Liftie slug is filled in automatically when known.
   The `lifts_open` sensor's `source` attribute (`liftie`/`skiapi`) shows which
   is in use.
 - **snow-forecast.com resort name** — **keyless**; adds reported base/summit/fresh
-  depth and last-snowfall date. Enter the resort's snow-forecast.com slug (the
+  depth and last-snowfall date. **Auto-filled at setup** (derived from the resort
+  name and validated against the live site), so it usually just works. Override
+  here if the auto-match missed — enter the resort's snow-forecast.com slug (the
   `<slug>` in `snow-forecast.com/resorts/<slug>/`), e.g. `Vail` or `Beaver-Creek`.
 - **Snow refresh interval (hours)** — polls snow-forecast.com on its own slow
   cadence (default **12h**, independent of the main update interval); reported

@@ -38,7 +38,7 @@ from .const import (
     SNOW_FORECAST_USER_AGENT,
     WIKIDATA_HOST,
 )
-from .helpers import parse_snow_forecast
+from .helpers import parse_snow_forecast, snow_forecast_slug
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -177,7 +177,9 @@ async def async_skiapi(hass: HomeAssistant, key: str, slug: str) -> dict[str, An
 
 
 # --- snow-forecast.com reported depths (optional, keyless) -----------------
-async def async_snow_forecast(hass: HomeAssistant, slug: str) -> dict[str, Any]:
+async def async_snow_forecast(
+    hass: HomeAssistant, slug: str, *, timeout: float = _TIMEOUT
+) -> dict[str, Any]:
     """Scrape reported top/base/fresh depth + last-snowfall for a resort.
 
     Reads ``snow-forecast.com/resorts/<slug>/6day/top`` (the top-station snow
@@ -192,7 +194,7 @@ async def async_snow_forecast(hass: HomeAssistant, slug: str) -> dict[str, Any]:
         resp = await client.get(
             url,
             headers={"User-Agent": SNOW_FORECAST_USER_AGENT},
-            timeout=_TIMEOUT,
+            timeout=timeout,
             follow_redirects=True,
         )
     except (httpx.HTTPError, httpx.InvalidURL) as err:
@@ -210,6 +212,30 @@ async def async_snow_forecast(hass: HomeAssistant, slug: str) -> dict[str, Any]:
             slug,
         )
     return parsed
+
+
+async def async_resolve_snow_forecast(
+    hass: HomeAssistant, name: str | None
+) -> str | None:
+    """Auto-resolve a resort's snow-forecast.com slug from its name.
+
+    Derives a candidate slug (:func:`helpers.snow_forecast_slug`) and confirms it
+    against the live site — returning it only when the page exists and actually
+    parses, so the stored slug is known-good. Returns ``None`` when there's no
+    candidate, the resort isn't on snow-forecast.com, or the site is unreachable;
+    the caller then leaves the slug for the user to enter. Never raises, so it is
+    safe to call from the config flow without blocking setup on a failure.
+    """
+    slug = snow_forecast_slug(name)
+    if not slug:
+        return None
+    try:
+        data = await async_snow_forecast(hass, slug, timeout=10.0)
+    except SkiResortError:
+        return None
+    if data and any(value is not None for value in data.values()):
+        return slug
+    return None
 
 
 # --- NWS weather alerts (US, public domain) --------------------------------
