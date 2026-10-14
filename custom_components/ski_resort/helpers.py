@@ -82,20 +82,65 @@ def m_to_elev_display(value: float | None, imperial: bool) -> float | None:
     return round(value / _M_PER_FOOT) if imperial else round(value)
 
 
-def parse_measure(value: object) -> float | None:
-    """Parse a RapidAPI unit-suffixed measurement ("83in") to a float."""
-    if value is None or isinstance(value, bool):
-        return None
-    if isinstance(value, (int, float)):
-        return float(value)
-    if not isinstance(value, str):
-        return None
-    match = _NUMBER_RE.search(value)
-    return float(match.group()) if match else None
+_SF_TABLE_RE = re.compile(r"snow-depths-table__table.*?</table>", re.S)
+_SF_ROW_RE = re.compile(r"<tr.*?</tr>", re.S)
+_SF_TH_RE = re.compile(r"<th[^>]*>(.*?)</th>", re.S)
+_SF_TD_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.S)
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _clean_cell(html: str) -> str:
+    """Strip tags/entities/whitespace from a table cell's inner HTML."""
+    text = _TAG_RE.sub("", html)
+    for entity, repl in (("&thinsp;", " "), ("&nbsp;", " "), ("&ndash;", "-")):
+        text = text.replace(entity, repl)
+    return " ".join(text.split()).strip()
+
+
+def _depth_cm(text: str) -> float | None:
+    """Parse a depth cell ("49 cm", "19 in", "—") to centimetres, or ``None``."""
+    match = _NUMBER_RE.search(text)
+    if not match:
+        return None  # "—"/empty: no reported value
+    value = float(match.group())
+    if re.search(r"\bin\b", text):  # page served inches -> normalise to cm
+        value *= 2.54
+    return round(value, 1)
+
+
+def parse_snow_forecast(html: str) -> dict[str, Any]:
+    """Parse a snow-forecast.com ``/<slug>/6day/top`` page.
+
+    Reads the snow-depths table into reported top/base/fresh depth (in cm, the
+    page's native unit, normalised if it served inches) and the last-snowfall
+    date string. Missing values (an em dash) become ``None``, and any field not
+    found simply stays ``None`` — so a layout change degrades gracefully rather
+    than raising.
+    """
+    out: dict[str, Any] = {"top": None, "base": None, "fresh": None, "last_snow": None}
+    table = _SF_TABLE_RE.search(html)
+    if not table:
+        return out
+    for row in _SF_ROW_RE.findall(table.group(0)):
+        th = _SF_TH_RE.search(row)
+        td = _SF_TD_RE.search(row)
+        if not th or not td:
+            continue
+        label = _clean_cell(th.group(1)).lower()
+        cell = _clean_cell(td.group(1))
+        if "top snow depth" in label:
+            out["top"] = _depth_cm(cell)
+        elif "bottom snow depth" in label:
+            out["base"] = _depth_cm(cell)
+        elif "fresh snowfall" in label:
+            out["fresh"] = _depth_cm(cell)
+        elif "last snowfall" in label:
+            out["last_snow"] = cell or None
+    return out
 
 
 def parse_snow_date(value: object) -> date | None:
-    """Parse a "25 Jan 2026" RapidAPI date to a ``date``, or ``None``."""
+    """Parse a "25 Jan 2026" snow-forecast.com date to a ``date``, or ``None``."""
     if not isinstance(value, str) or not value.strip():
         return None
     try:

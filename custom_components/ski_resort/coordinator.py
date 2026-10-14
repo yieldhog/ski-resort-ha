@@ -2,8 +2,8 @@
 
 One coordinator per config entry (one OpenSkiMap ski area). Each refresh always
 fetches free Open-Meteo weather/snow for the area's coordinates, and optionally
-live lift status (self-hosted Liftie or RapidAPI skiapi) and a RapidAPI
-snow-forecast summary. Optional sources degrade to ``None`` on failure — only a
+live lift status (self-hosted Liftie or RapidAPI skiapi) and reported depths
+from snow-forecast.com. Optional sources degrade to ``None`` on failure — only a
 total wipe-out (even Open-Meteo failing) raises ``UpdateFailed``. Nothing here
 requires an API key, so there is no reauth flow.
 """
@@ -27,9 +27,9 @@ from .api import (
     async_liftie,
     async_nws_alerts,
     async_open_meteo,
-    async_rapidapi_snow,
     async_skiapi,
     async_skimap_trailmap,
+    async_snow_forecast,
     async_wikidata_item,
 )
 from .const import (
@@ -71,9 +71,9 @@ from .const import (
 )
 from .helpers import (
     alert_rank,
+    cm_to_display,
     condition_from_wmo,
     local_now_marker,
-    parse_measure,
     parse_snow_date,
     point_in_geometry,
     sum_next_hours,
@@ -136,14 +136,13 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """
         opts = self.entry.options
         lat, lon = self.area.get("lat"), self.area.get("lon")
-        key = opts.get(CONF_RAPIDAPI_KEY)
         forecast_resort = opts.get(CONF_FORECAST_RESORT)
 
         jobs: dict[str, Any] = {}
         if lat is not None and lon is not None:
             jobs[DATA_WEATHER] = self._fetch_weather(lat, lon)
-        if key and forecast_resort and self._snow_due(opts):
-            jobs[DATA_SNOW] = self._fetch_rapidapi_snow(key, forecast_resort)
+        if forecast_resort and self._snow_due(opts):
+            jobs[DATA_SNOW] = self._fetch_snow_forecast(forecast_resort)
         jobs[DATA_LIFTS] = self._fetch_lifts()
         if self._info is None:
             jobs[DATA_INFO] = self._fetch_info()
@@ -263,13 +262,13 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             for i, day in enumerate(times)
         ]
 
-    # --- RapidAPI snow-forecast (optional, throttled) ---------------------
+    # --- snow-forecast.com reported depths (optional, throttled) ----------
     def _snow_due(self, opts: Any) -> bool:
-        """Whether the metered RapidAPI snow source is due for a refresh.
+        """Whether the snow-forecast.com scrape is due for a refresh.
 
         Reported depths change roughly daily, so this source polls on its own,
         much slower cadence (``CONF_FORECAST_INTERVAL_HOURS``) than the main
-        coordinator to stay within RapidAPI free-tier quotas.
+        coordinator, keeping the scraping light.
         """
         if self._snow is None or self._snow_at is None:
             return True
@@ -278,15 +277,15 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         return dt_util.utcnow() - self._snow_at >= timedelta(hours=hours)
 
-    async def _fetch_rapidapi_snow(self, key: str, resort: str) -> dict[str, Any]:
-        units_q = "i" if self.imperial else "m"
-        raw = await async_rapidapi_snow(self.hass, key, resort, units_q)
+    async def _fetch_snow_forecast(self, resort: str) -> dict[str, Any]:
+        """Scrape reported depths (cm) and convert to the configured units."""
+        raw = await async_snow_forecast(self.hass, resort)
+        imperial = self.imperial
         return {
-            "fresh": parse_measure(raw.get("freshSnowfall")),
-            "top": parse_measure(raw.get("topSnowDepth")),
-            "base": parse_measure(raw.get("botSnowDepth")),
-            "last_snow_date": parse_snow_date(raw.get("lastSnowfallDate")),
-            "raw": raw,
+            "fresh": cm_to_display(raw.get("fresh"), imperial),
+            "top": cm_to_display(raw.get("top"), imperial),
+            "base": cm_to_display(raw.get("base"), imperial),
+            "last_snow_date": parse_snow_date(raw.get("last_snow")),
         }
 
     # --- Lifts (Liftie or skiapi) -----------------------------------------

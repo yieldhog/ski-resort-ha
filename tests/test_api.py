@@ -109,17 +109,56 @@ async def test_liftie_tolerates_full_api_url(hass):
     assert called_url == "http://host:3000/api/resort/vail"  # not doubled
 
 
-async def test_skiapi_and_rapidapi_snow_shapes(hass):
-    """skiapi and rapidapi-snow return their JSON dicts (cover both clients)."""
-    from custom_components.ski_resort.api import async_rapidapi_snow
+async def test_skiapi_and_snow_forecast(hass):
+    """skiapi returns its JSON; snow-forecast scrapes depths from HTML."""
+    from custom_components.ski_resort.api import async_snow_forecast
 
     patcher, _ = _patch_get(hass, httpx.Response(200, json={"data": {"lifts": {}}}))
     with patcher:
         assert await async_skiapi(hass, "k", "vail") == {"data": {"lifts": {}}}
-    patcher2, _ = _patch_get(hass, httpx.Response(200, json={"topSnowDepth": "80in"}))
+
+    html = (
+        '<table class="snow-depths-table__table"><tbody>'
+        "<tr><th>Top snow depth:</th><td>49&thinsp;cm</td></tr>"
+        "<tr><th>Bottom snow depth:</th><td>—</td></tr>"
+        "<tr><th>Fresh snowfall depth:</th><td>12 cm</td></tr>"
+        "<tr><th>Last snowfall:</th><td>8 Oct 2026</td></tr>"
+        "</tbody></table>"
+    )
+    patcher2, client2 = _patch_get(hass, httpx.Response(200, text=html))
     with patcher2:
-        got = await async_rapidapi_snow(hass, "k", "Vail", "i")
-    assert got == {"topSnowDepth": "80in"}
+        got = await async_snow_forecast(hass, "Solden")
+    assert got == {"top": 49.0, "base": None, "fresh": 12.0, "last_snow": "8 Oct 2026"}
+    assert client2.get.call_args.args[0].endswith("/resorts/Solden/6day/top")
+
+
+async def test_snow_forecast_non_200_is_empty(hass):
+    """A non-200 from snow-forecast.com degrades to an empty mapping."""
+    from custom_components.ski_resort.api import async_snow_forecast
+
+    patcher, _ = _patch_get(hass, httpx.Response(503, text="busy"))
+    with patcher:
+        assert await async_snow_forecast(hass, "Vail") == {}
+
+
+async def test_snow_forecast_transport_error_raises(hass):
+    """A transport failure raises SkiResortConnectionError (coordinator degrades)."""
+    from custom_components.ski_resort.api import async_snow_forecast
+
+    patcher, _ = _patch_get(hass, side_effect=httpx.ConnectError("boom"))
+    with patcher, pytest.raises(SkiResortConnectionError):
+        await async_snow_forecast(hass, "Vail")
+
+
+async def test_snow_forecast_layout_change_warns(hass, caplog):
+    """A 200 page our parser can't read warns that the layout may have changed."""
+    from custom_components.ski_resort.api import async_snow_forecast
+
+    patcher, _ = _patch_get(hass, httpx.Response(200, text="<html>no table</html>"))
+    with patcher, caplog.at_level("WARNING"):
+        result = await async_snow_forecast(hass, "Vail")
+    assert all(value is None for value in result.values())
+    assert "layout may have changed" in caplog.text
 
 
 async def test_nws_alerts_returns_features_with_user_agent(hass):
