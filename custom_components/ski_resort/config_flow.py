@@ -6,9 +6,11 @@ from free Open-Meteo). Steps:
 1. ``user``   — a name query + optional country filter.
 2. ``select`` — pick the matching ski area (and an optional display name).
 
-One config entry == one ski area, keyed by its OpenSkiMap id. Options add units,
-poll interval, an optional RapidAPI key (RapidAPI snow + skiapi lifts), a
-self-hosted Liftie URL, and the lift slug (auto-filled from the crosswalk).
+One config entry == one ski area, keyed by its OpenSkiMap id. The lift slug
+(from the Liftie crosswalk) and the snow-forecast.com slug (derived from the
+resort name and validated against the live site) are both auto-filled at setup;
+options let you override them and add units, poll interval, an optional RapidAPI
+key (skiapi lift fallback), and a self-hosted Liftie URL.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ from homeassistant.helpers.selector import (
 )
 
 from . import data as ski_data
+from .api import async_resolve_snow_forecast
 from .const import (
     CONF_AREA,
     CONF_COUNTRY,
@@ -132,6 +135,18 @@ class SkiResortConfigFlow(ConfigFlow, domain=DOMAIN):
             slug = await self.hass.async_add_executor_job(
                 ski_data.liftie_slug_for, area_id
             )
+            # Auto-resolve the snow-forecast.com slug from the canonical resort
+            # name and keep it only if the live page actually parses, so reported
+            # depths work out of the box without the user hunting for a slug.
+            forecast = await async_resolve_snow_forecast(
+                self.hass, area.get("name") or name
+            )
+            entry_options: dict[str, Any] = {
+                CONF_UNITS: DEFAULT_UNITS,
+                CONF_LIFT_SLUG: slug or "",
+            }
+            if forecast:
+                entry_options[CONF_FORECAST_RESORT] = forecast
             return self.async_create_entry(
                 title=name,
                 data={
@@ -139,10 +154,7 @@ class SkiResortConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_NAME: name,
                     CONF_AREA: area,
                 },
-                options={
-                    CONF_UNITS: DEFAULT_UNITS,
-                    CONF_LIFT_SLUG: slug or "",
-                },
+                options=entry_options,
             )
 
         options = [

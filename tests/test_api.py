@@ -161,6 +161,35 @@ async def test_snow_forecast_layout_change_warns(hass, caplog):
     assert "layout may have changed" in caplog.text
 
 
+async def test_resolve_snow_forecast(hass):
+    """The resort name auto-resolves to a validated snow-forecast.com slug."""
+    from custom_components.ski_resort.api import async_resolve_snow_forecast
+
+    html = (
+        '<table class="snow-depths-table__table"><tbody>'
+        "<tr><th>Top snow depth:</th><td>49 cm</td></tr>"
+        "<tr><th>Last snowfall:</th><td>8 Oct 2026</td></tr>"
+        "</tbody></table>"
+    )
+    patcher, client = _patch_get(hass, httpx.Response(200, text=html))
+    with patcher:
+        assert await async_resolve_snow_forecast(hass, "Beaver Creek") == "Beaver-Creek"
+    assert client.get.call_args.args[0].endswith("/resorts/Beaver-Creek/6day/top")
+
+    # A 404 (unknown resort) -> empty parse -> no slug stored.
+    patcher2, _ = _patch_get(hass, httpx.Response(404, text="nope"))
+    with patcher2:
+        assert await async_resolve_snow_forecast(hass, "Nowhere") is None
+
+    # A transport error is swallowed (setup must not fail).
+    patcher3, _ = _patch_get(hass, side_effect=httpx.ConnectError("boom"))
+    with patcher3:
+        assert await async_resolve_snow_forecast(hass, "Vail") is None
+
+    # No usable candidate name -> None without any fetch.
+    assert await async_resolve_snow_forecast(hass, "") is None
+
+
 async def test_nws_alerts_returns_features_with_user_agent(hass):
     from custom_components.ski_resort.api import async_nws_alerts
 

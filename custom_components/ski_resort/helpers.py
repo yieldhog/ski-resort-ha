@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -137,6 +138,24 @@ def parse_snow_forecast(html: str) -> dict[str, Any]:
         elif "last snowfall" in label:
             out["last_snow"] = cell or None
     return out
+
+
+def snow_forecast_slug(name: str | None) -> str | None:
+    """Derive a candidate snow-forecast.com slug from a resort name.
+
+    snow-forecast.com paths look like ``/resorts/Beaver-Creek/`` — each word
+    capitalised and joined by hyphens, with diacritics folded to ASCII (so
+    "Sölden" -> "Solden"). This mirrors that: fold accents, keep alphanumeric
+    runs, join with ``-``. It's only a *candidate* — callers validate it against
+    the live site before trusting it — so imperfect cases (apostrophes, a
+    "Glacier" suffix) simply fail validation and fall back to a manual entry.
+    Returns ``None`` when nothing usable remains.
+    """
+    if not name:
+        return None
+    folded = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    words = re.findall(r"[A-Za-z0-9]+", folded)
+    return "-".join(words) or None
 
 
 def parse_snow_date(value: object) -> date | None:
