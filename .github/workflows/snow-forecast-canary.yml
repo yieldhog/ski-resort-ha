@@ -1,0 +1,26 @@
+name: snow-forecast canary
+
+# The reported-depth sensors scrape snow-forecast.com. This weekly canary fetches
+# a live page and runs the integration's real parser against it, so a layout
+# change there turns this job red (and notifies the maintainer) before users hit
+# it. It's intentionally separate from the main test suite so a snow-forecast.com
+# outage can never redden normal CI.
+
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+  workflow_dispatch:
+
+jobs:
+  canary:
+    name: Parse live snow-forecast.com
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      # No dependencies: the parser is pure and the fetch uses urllib.
+      - name: Verify our parser still matches the live page
+        run: python scripts/snow_forecast_canary.py

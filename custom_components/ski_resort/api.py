@@ -199,7 +199,17 @@ async def async_snow_forecast(hass: HomeAssistant, slug: str) -> dict[str, Any]:
         raise SkiResortConnectionError(f"snow-forecast {slug}: {err}") from err
     if resp.status_code >= 300:
         return {}
-    return parse_snow_forecast(resp.text)
+    parsed = parse_snow_forecast(resp.text)
+    if all(value is None for value in parsed.values()):
+        # A closed resort still yields a 0 depth and a last-snowfall date, so an
+        # all-empty parse of a 200 page means the page structure changed.
+        _LOGGER.warning(
+            "snow-forecast.com returned a page for %s but nothing could be "
+            "parsed — the site layout may have changed; please report this at "
+            "https://github.com/yieldhog/ski-resort-ha/issues",
+            slug,
+        )
+    return parsed
 
 
 # --- NWS weather alerts (US, public domain) --------------------------------

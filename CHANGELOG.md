@@ -19,6 +19,13 @@ Reported depths, now keyless.
   option is now simply the snow-forecast.com slug (e.g. `Vail`). The source is
   still throttled (default 12h) to keep the scraping light.
 
+### Added
+- **Scrape health monitoring.** A weekly `snow-forecast canary` workflow fetches
+  a live page and runs the real parser against it, so a snow-forecast.com layout
+  change turns CI red (and notifies the maintainer) before it reaches users. At
+  runtime, a 200 page the parser can't read now logs a distinct "layout may have
+  changed" warning rather than failing silently.
+
 ## [1.2.1] - 2026-08-30
 
 Tell rain from snow.

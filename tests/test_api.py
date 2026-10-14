@@ -150,6 +150,17 @@ async def test_snow_forecast_transport_error_raises(hass):
         await async_snow_forecast(hass, "Vail")
 
 
+async def test_snow_forecast_layout_change_warns(hass, caplog):
+    """A 200 page our parser can't read warns that the layout may have changed."""
+    from custom_components.ski_resort.api import async_snow_forecast
+
+    patcher, _ = _patch_get(hass, httpx.Response(200, text="<html>no table</html>"))
+    with patcher, caplog.at_level("WARNING"):
+        result = await async_snow_forecast(hass, "Vail")
+    assert all(value is None for value in result.values())
+    assert "layout may have changed" in caplog.text
+
+
 async def test_nws_alerts_returns_features_with_user_agent(hass):
     from custom_components.ski_resort.api import async_nws_alerts
 
