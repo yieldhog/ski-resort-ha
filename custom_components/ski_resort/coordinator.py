@@ -20,6 +20,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .api import (
+    SkiResortAuthError,
     SkiResortError,
     async_avalanche_ca_areas,
     async_avalanche_ca_metadata,
@@ -349,6 +350,11 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 item = await async_wikidata_item(self.hass, wikidata_id)
                 info.update(self._parse_wikidata(item))
+            except SkiResortAuthError as err:
+                # A rejection (e.g. Wikimedia 403) is not transient; retrying it
+                # every poll would never succeed and, worse, would keep throwing
+                # away the trail map that skimap resolved fine. Treat it as final.
+                _LOGGER.debug("Wikidata fetch rejected for %s: %s", wikidata_id, err)
             except SkiResortError as err:
                 _LOGGER.debug("Wikidata fetch failed for %s: %s", wikidata_id, err)
                 completed = False

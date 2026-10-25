@@ -7,7 +7,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from homeassistant.util import dt as dt_util
 
-from custom_components.ski_resort.api import SkiResortConnectionError
+from custom_components.ski_resort.api import (
+    SkiResortAuthError,
+    SkiResortConnectionError,
+)
 from custom_components.ski_resort.const import CONF_FORECAST_INTERVAL_HOURS
 from custom_components.ski_resort.coordinator import (
     SkiResortDataUpdateCoordinator as C,
@@ -175,6 +178,24 @@ async def test_fetch_info_completes_returns_dict():
             "website": "https://x",
             "trail_map_url": "https://files/trail",
         }
+
+
+async def test_fetch_info_wikidata_auth_rejection_keeps_trail_map():
+    """A Wikidata 403 is final, so the trail map still caches (issue #10).
+
+    The rejection is not transient; discarding the whole enrichment would retry
+    it forever and never surface the trail map that skimap resolved fine.
+    """
+    c = _info_coord({"wd": "Q1", "sk": 507})
+    with patch(
+        "custom_components.ski_resort.coordinator.async_wikidata_item",
+        new=AsyncMock(side_effect=SkiResortAuthError("Key rejected (403)")),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_skimap_trailmap",
+        new=AsyncMock(return_value="https://files/trail"),
+    ):
+        # Completes (not None) with the trail map, so it's cached, not retried.
+        assert await C._fetch_info(c) == {"trail_map_url": "https://files/trail"}
 
 
 async def test_fetch_info_empty_but_complete_is_cacheable():

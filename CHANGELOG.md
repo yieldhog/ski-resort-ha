@@ -3,6 +3,21 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.4.2] - 2026-10-25
+
+### Fixed
+- **Trail map never loaded when Wikidata answered 403** ([#10]). Wikidata
+  requests were sent without a `User-Agent`, which Wikimedia's policy rejects
+  with a 403. That rejection is permanent, so the whole static enrichment — the
+  successfully-resolved trail-map image URL included — was discarded and retried
+  on every poll, and the `image.<resort>_trail_map` entity stayed `unavailable`.
+  Two fixes: Wikidata requests now send a descriptive `User-Agent` (as the NWS
+  and snow-forecast sources already do), and a rejection is treated as final so
+  the trail map still caches even if Wikidata is unreachable. Thanks @sNNNeaker
+  for the precise diagnosis.
+
+[#10]: https://github.com/yieldhog/ski-resort-ha/issues/10
+
 ## [1.4.1] - 2026-10-25
 
 ### Fixed
