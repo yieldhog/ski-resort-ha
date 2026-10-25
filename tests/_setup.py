@@ -35,6 +35,7 @@ WIKIDATA = {"statements": {
 TRAIL_MAP_URL = "https://files.skimap.org/trailmap507"
 
 OPEN_METEO = {
+    "utc_offset_seconds": -25200,  # MST (UTC-7); Open-Meteo timezone=auto
     "current": {
         "temperature_2m": -5.0, "apparent_temperature": -12.0,
         "relative_humidity_2m": 80, "weather_code": 73,
