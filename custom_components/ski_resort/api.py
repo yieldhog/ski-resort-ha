@@ -37,6 +37,7 @@ from .const import (
     SNOW_FORECAST_HOST,
     SNOW_FORECAST_USER_AGENT,
     WIKIDATA_HOST,
+    WIKIDATA_USER_AGENT,
 )
 from .helpers import parse_snow_forecast, snow_forecast_slug
 
@@ -301,6 +302,7 @@ async def async_wikidata_item(hass: HomeAssistant, qid: str) -> dict[str, Any]:
     data = await _get_json(
         hass,
         f"https://{WIKIDATA_HOST}/w/rest.php/wikibase/v1/entities/items/{quote(qid)}",
+        headers={"User-Agent": WIKIDATA_USER_AGENT},
     )
     return data if isinstance(data, dict) else {}
 

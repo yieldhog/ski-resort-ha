@@ -36,6 +36,11 @@ SKIMAP_PERMALINK = "https://skimap.org/skiareas/view/{id}"
 WIKIDATA_PERMALINK = "https://www.wikidata.org/wiki/{id}"
 COMMONS_FILEPATH = "https://commons.wikimedia.org/wiki/Special:FilePath/{name}"
 WIKIDATA_HOST = "www.wikidata.org"
+# Wikimedia's User-Agent policy rejects the default client UA (403); send a
+# descriptive one with a contact URL, as required.
+WIKIDATA_USER_AGENT = (
+    "home-assistant-ski_resort (https://github.com/yieldhog/ski-resort-ha)"
+)
 SKIMAP_HOST = "skimap.org"
 
 # --- Config entry data keys ------------------------------------------------

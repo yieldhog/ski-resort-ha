@@ -250,9 +250,13 @@ async def test_avalanche_canada_clients(hass):
 async def test_wikidata_item(hass):
     from custom_components.ski_resort.api import async_wikidata_item
 
-    patcher, _ = _patch_get(hass, httpx.Response(200, json={"statements": {"P18": []}}))
+    patcher, client = _patch_get(
+        hass, httpx.Response(200, json={"statements": {"P18": []}})
+    )
     with patcher:
         assert await async_wikidata_item(hass, "Q1") == {"statements": {"P18": []}}
+    # Wikimedia rejects the default client UA (403); a descriptive one is sent.
+    assert client.get.call_args.kwargs["headers"]["User-Agent"]
 
 
 async def test_skimap_trailmap_parses_og_image(hass):
