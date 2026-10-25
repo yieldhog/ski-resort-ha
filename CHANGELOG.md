@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.4.1] - 2026-10-25
+
+### Fixed
+- **Daily forecast showed the previous weekday west of UTC** ([#9]). The daily
+  forecast's `datetime` was Open-Meteo's bare `YYYY-MM-DD` date, which HA reads
+  as UTC midnight — so e.g. in `America/Denver` every day was labelled one
+  weekday early. It's now anchored to the resort's local midnight using
+  Open-Meteo's `utc_offset_seconds` (falling back to the HA time zone if that's
+  missing). Thanks @sNNNeaker for the detailed report.
+
+[#9]: https://github.com/yieldhog/ski-resort-ha/issues/9
+
 ## [1.4.0] - 2026-10-14
 
 Reported depths now configure themselves.

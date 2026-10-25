@@ -16,7 +16,7 @@ from custom_components.ski_resort.const import (
     UNIT_METRIC,
 )
 
-from ._setup import AREA, AREA_CA, setup_area
+from ._setup import AREA, AREA_CA, OPEN_METEO, setup_area
 
 FULL_OPTS = {CONF_LIFT_SLUG: "vail", CONF_RAPIDAPI_KEY: "k",
              CONF_FORECAST_RESORT: "Vail"}
@@ -45,6 +45,27 @@ async def test_weather_entity(hass: HomeAssistant):
     forecast = resp[wx.entity_id]["forecast"]
     assert len(forecast) == 2
     assert forecast[0]["apparent_temperature"] == -9.0  # daily feels-like high
+    # datetime is anchored to the resort's local midnight (not a bare date read
+    # as UTC, which would shift the weekday west of UTC) — issue #9.
+    assert forecast[0]["datetime"] == "2026-01-25T00:00:00-07:00"
+
+
+async def test_weather_forecast_datetime_falls_back_without_offset(
+    hass: HomeAssistant,
+):
+    """With no Open-Meteo offset, the forecast datetime uses HA local midnight."""
+    om = {k: v for k, v in OPEN_METEO.items() if k != "utc_offset_seconds"}
+    entry, _ = await setup_area(hass, om=om)
+    wx = _state(hass, entry, "weather")
+    resp = await hass.services.async_call(
+        "weather", "get_forecasts",
+        {"entity_id": wx.entity_id, "type": "daily"},
+        blocking=True, return_response=True,
+    )
+    dt = resp[wx.entity_id]["forecast"][0]["datetime"]
+    # A full ISO datetime (date + time + offset), not the bare "2026-01-25".
+    assert dt.startswith("2026-01-25T")
+    assert dt != "2026-01-25"
 
 
 async def test_feels_like_sensor(hass: HomeAssistant):

@@ -15,6 +15,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from . import SkiResortConfigEntry
 from .const import (
@@ -29,8 +30,23 @@ from .const import (
 )
 from .coordinator import SkiResortDataUpdateCoordinator
 from .entity import SkiResortEntity
+from .helpers import day_start_iso
 
 PARALLEL_UPDATES = 0
+
+
+def _forecast_datetime(day_value: Any, utc_offset_seconds: Any) -> Any:
+    """Return a full ISO datetime for a daily forecast's date.
+
+    HA reads a bare ``YYYY-MM-DD`` as UTC midnight, mislabelling the day west of
+    UTC. Anchor it to the resort's local midnight using Open-Meteo's offset; if
+    that offset is missing, fall back to the HA time zone's local midnight.
+    """
+    anchored = day_start_iso(day_value, utc_offset_seconds)
+    if anchored is not None:
+        return anchored
+    parsed = dt_util.parse_date(day_value) if isinstance(day_value, str) else None
+    return dt_util.start_of_local_day(parsed).isoformat() if parsed else day_value
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -96,11 +112,12 @@ class SkiResortWeather(SkiResortEntity, WeatherEntity):
     async def async_forecast_daily(self) -> list[Forecast] | None:
         """Return the daily forecast built from Open-Meteo."""
         days = self._weather.get(WX_DAILY) or []
+        offset = (self._weather.get("raw") or {}).get("utc_offset_seconds")
         forecast: list[Forecast] = []
         for day in days:
             forecast.append(
                 Forecast(
-                    datetime=day.get("datetime"),
+                    datetime=_forecast_datetime(day.get("datetime"), offset),
                     condition=day.get("condition"),
                     native_temperature=day.get("temperature"),
                     native_templow=day.get("templow"),

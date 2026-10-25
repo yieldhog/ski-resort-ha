@@ -9,6 +9,7 @@ import pytest
 from custom_components.ski_resort.helpers import (
     cm_to_display,
     condition_from_wmo,
+    day_start_iso,
     local_now_marker,
     m_to_depth_display,
     m_to_elev_display,
@@ -63,6 +64,18 @@ def test_parse_snow_forecast():
     assert parse_snow_forecast("<html>nothing here</html>") == {
         "top": None, "base": None, "fresh": None, "last_snow": None,
     }
+
+
+def test_day_start_iso():
+    # Bare date + resort offset -> local-midnight ISO datetime (issue #9).
+    assert day_start_iso("2026-10-23", -25200) == "2026-10-23T00:00:00-07:00"
+    assert day_start_iso("2026-10-23", 3600) == "2026-10-23T00:00:00+01:00"
+    assert day_start_iso("2026-10-23", 0) == "2026-10-23T00:00:00+00:00"
+    # Missing offset or unusable input -> None so the caller can fall back.
+    assert day_start_iso("2026-10-23", None) is None
+    assert day_start_iso("2026-10-23", True) is None  # bool is not an offset
+    assert day_start_iso("not-a-date", -25200) is None
+    assert day_start_iso(None, -25200) is None
 
 
 def test_snow_forecast_slug():

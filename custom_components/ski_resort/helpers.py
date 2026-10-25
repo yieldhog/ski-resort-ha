@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 _NUMBER_RE = re.compile(r"-?\d+(?:\.\d+)?")
@@ -156,6 +156,31 @@ def snow_forecast_slug(name: str | None) -> str | None:
     folded = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     words = re.findall(r"[A-Za-z0-9]+", folded)
     return "-".join(words) or None
+
+
+def day_start_iso(date_str: Any, utc_offset_seconds: Any) -> str | None:
+    """ISO datetime at local midnight for a ``YYYY-MM-DD`` date + a UTC offset.
+
+    Open-Meteo (``timezone=auto``) returns each daily forecast's date as a bare
+    ``YYYY-MM-DD`` string in the *resort's* local time. Passed straight to HA's
+    ``Forecast.datetime`` that is read as UTC midnight, so west of UTC every day
+    is labelled under the previous weekday. Anchoring it to local midnight with
+    the resort's offset (e.g. ``2026-10-23T00:00:00-06:00``) makes it
+    unambiguous. Returns ``None`` when the date is unparseable or the offset is
+    missing, so the caller can fall back.
+    """
+    if not isinstance(date_str, str):
+        return None
+    try:
+        day = date.fromisoformat(date_str)
+    except ValueError:
+        return None
+    if not isinstance(utc_offset_seconds, (int, float)) or isinstance(
+        utc_offset_seconds, bool
+    ):
+        return None
+    tz = timezone(timedelta(seconds=int(utc_offset_seconds)))
+    return datetime.combine(day, time(), tzinfo=tz).isoformat()
 
 
 def parse_snow_date(value: object) -> date | None:
