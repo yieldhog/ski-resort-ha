@@ -76,7 +76,7 @@
         "name": "Precipitation (24h)"
       },
       "snow_depth": {
-        "name": "Snow depth"
+        "name": "Modeled snow depth"
       },
       "freezing_level": {
         "name": "Freezing level"

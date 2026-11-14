@@ -68,6 +68,22 @@ async def test_weather_forecast_datetime_falls_back_without_offset(
     assert dt != "2026-01-25"
 
 
+async def test_snow_depth_disabled_by_default(hass: HomeAssistant):
+    """The modeled Open-Meteo snow depth is off by default (reported depths win).
+
+    It stays registered (a no-coverage resort can enable it) but isn't loaded, so
+    it never shows a confusing ~0 next to the resort-reported base/summit depth.
+    """
+    entry, _ = await setup_area(hass)
+    registry = er.async_get(hass)
+    eid = registry.async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_snow_depth"
+    )
+    assert eid is not None
+    assert registry.async_get(eid).disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    assert hass.states.get(eid) is None  # not loaded while disabled
+
+
 async def test_feels_like_sensor(hass: HomeAssistant):
     entry, _ = await setup_area(hass)
     assert _state(hass, entry, "feels_like").state == "-12.0"  # apparent temperature
@@ -76,7 +92,6 @@ async def test_feels_like_sensor(hass: HomeAssistant):
 async def test_snow_and_terrain_sensors_imperial(hass: HomeAssistant):
     entry, _ = await setup_area(hass)  # default imperial
     assert _state(hass, entry, "fresh_snow").state == "9.4"  # 24cm -> in
-    assert _state(hass, entry, "snow_depth").state == "47.2"  # 1.2m -> in
     assert _state(hass, entry, "freezing_level").state == "8202"  # 2500m -> ft
     assert _state(hass, entry, "lift_count").state == "32"
     assert _state(hass, entry, "run_count").state == "241"
