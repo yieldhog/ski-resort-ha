@@ -48,6 +48,16 @@ _TIMEOUT = 20.0
 # excluded: retrying a quota-limited API (e.g. RapidAPI's metered plans) can't
 # succeed and just burns more of the allowance, so we fail fast instead.
 _RETRY_STATUSES = frozenset({500, 502, 503, 504})
+# Transient transport failures worth retrying like a 5xx: a timeout, a
+# dropped/reset connection, or the server closing the connection mid-response.
+# Open-Meteo occasionally times out or resets a single request under load; a
+# brief retry rides over it instead of blanking the weather for a whole poll.
+# A bad URL or protocol misuse is not transient and still fails fast.
+_RETRY_EXCEPTIONS = (
+    httpx.TimeoutException,
+    httpx.NetworkError,
+    httpx.RemoteProtocolError,
+)
 _MAX_ATTEMPTS = 3
 _RETRY_BACKOFF = 0.5
 
@@ -80,7 +90,8 @@ async def _get_json(
     headers: dict[str, str] | None = None,
     params: dict[str, Any] | None = None,
 ) -> Any:
-    """GET ``url`` and return parsed JSON, with retry/backoff on 429/5xx.
+    """GET ``url`` and return parsed JSON, with retry/backoff on 5xx and on
+    transient transport failures (timeouts, dropped connections).
 
     401/403 raise :class:`SkiResortAuthError`; transport failures raise
     :class:`SkiResortConnectionError`; other error statuses or bad bodies raise
@@ -92,10 +103,21 @@ async def _get_json(
             resp = await client.get(
                 url, headers=headers, params=params, timeout=_TIMEOUT
             )
+        except _RETRY_EXCEPTIONS as err:
+            # Transient (timeout / reset / early close): back off and retry,
+            # then give up. ``err!r`` keeps the exception type in the message —
+            # a bare timeout stringifies to "", which is why the log read
+            # "failed:" with nothing after it.
+            if attempt < _MAX_ATTEMPTS - 1:
+                await asyncio.sleep(_RETRY_BACKOFF * (2**attempt))
+                continue
+            raise SkiResortConnectionError(
+                f"Request to {url} failed after {_MAX_ATTEMPTS} attempts: {err!r}"
+            ) from err
         except (httpx.HTTPError, httpx.InvalidURL) as err:
-            # InvalidURL is not an HTTPError subclass; a mistyped Liftie base URL
-            # (e.g. missing scheme) lands here and must degrade, not crash.
-            raise SkiResortConnectionError(f"Request to {url} failed: {err}") from err
+            # Not transient: a mistyped Liftie base URL (InvalidURL is not an
+            # HTTPError subclass) or protocol misuse. Degrade without retrying.
+            raise SkiResortConnectionError(f"Request to {url} failed: {err!r}") from err
 
         if resp.status_code in (401, 403):
             raise SkiResortAuthError(f"Key rejected ({resp.status_code})")

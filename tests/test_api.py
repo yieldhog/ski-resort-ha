@@ -51,11 +51,42 @@ async def test_api_error_status(hass):
     assert exc.value.status_code == 404
 
 
-async def test_transport_error(hass):
-    patcher, _ = _patch_get(hass, side_effect=httpx.ConnectError("boom"))
+async def test_transport_error_retried_then_raised(hass, monkeypatch):
+    """A transient transport failure is retried, then raises (not an ApiError).
+
+    ``ReadTimeout("")`` reproduces the reported empty "failed:" log message.
+    """
+    import custom_components.ski_resort.api as api_mod
+
+    monkeypatch.setattr(api_mod, "_RETRY_BACKOFF", 0)
+    patcher, client = _patch_get(hass, side_effect=httpx.ReadTimeout(""))
     with patcher, pytest.raises(SkiResortConnectionError) as exc:
         await async_open_meteo(hass, 1, 2)
     assert not isinstance(exc.value, SkiResortApiError)
+    assert client.get.call_count == 3  # retried up to _MAX_ATTEMPTS
+    assert "ReadTimeout" in str(exc.value)  # type kept despite empty message
+
+
+async def test_transport_retry_then_success(hass, monkeypatch):
+    """A single transient timeout is retried and the next attempt succeeds."""
+    import custom_components.ski_resort.api as api_mod
+
+    monkeypatch.setattr(api_mod, "_RETRY_BACKOFF", 0)
+    patcher, client = _patch_get(hass)
+    client.get = AsyncMock(
+        side_effect=[httpx.ReadTimeout(""), httpx.Response(200, json={"ok": 1})]
+    )
+    with patcher:
+        assert await async_open_meteo(hass, 1, 2) == {"ok": 1}
+    assert client.get.call_count == 2
+
+
+async def test_non_transient_transport_error_not_retried(hass):
+    """A non-transient error (bad URL) fails fast without retrying."""
+    patcher, client = _patch_get(hass, side_effect=httpx.InvalidURL("bad url"))
+    with patcher, pytest.raises(SkiResortConnectionError):
+        await async_liftie(hass, "not-a-url", "vail")
+    assert client.get.call_count == 1  # not retried
 
 
 async def test_retry_then_success(hass, monkeypatch):
