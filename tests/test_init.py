@@ -68,6 +68,66 @@ async def test_weather_degrades_but_lifts_survive(hass: HomeAssistant):
     assert entry.runtime_data.data[DATA_LIFTS] is not None
 
 
+async def test_weather_retained_on_transient_failure(hass: HomeAssistant):
+    """A failed weather poll keeps the last-good reading (entity stays up)."""
+    from unittest.mock import AsyncMock, patch
+
+    from ._setup import LIFTIE
+
+    entry, _ = await setup_area(hass)  # first poll succeeds
+    coordinator = entry.runtime_data
+    good = coordinator.data[DATA_WEATHER]
+    assert good is not None
+
+    # Next poll: Open-Meteo fails, but the last-good weather is served instead
+    # of blanking the entity (still well within the staleness grace window).
+    with patch(
+        "custom_components.ski_resort.coordinator.async_open_meteo",
+        new=AsyncMock(side_effect=SkiResortConnectionError("down")),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_liftie",
+        new=AsyncMock(return_value=LIFTIE),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_nws_alerts",
+        new=AsyncMock(return_value=[]),
+    ):
+        await coordinator.async_refresh()
+
+    assert coordinator.data[DATA_WEATHER] == good  # last-good retained
+
+
+async def test_weather_unavailable_when_stale_beyond_grace(hass: HomeAssistant):
+    """Once the last-good weather is too old, the entity goes unavailable."""
+    from unittest.mock import AsyncMock, patch
+
+    from homeassistant.util import dt as dt_util
+
+    from ._setup import LIFTIE
+
+    entry, _ = await setup_area(
+        hass,
+        options={CONF_LIFT_SLUG: "vail", CONF_LIFTIE_BASE_URL: "http://l"},
+    )
+    coordinator = entry.runtime_data
+    assert coordinator.data[DATA_WEATHER] is not None
+
+    # Age the last success well past the grace window, then fail the fetch.
+    coordinator._weather_at = dt_util.utcnow() - coordinator.update_interval * 10
+    with patch(
+        "custom_components.ski_resort.coordinator.async_open_meteo",
+        new=AsyncMock(side_effect=SkiResortConnectionError("down")),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_liftie",
+        new=AsyncMock(return_value=LIFTIE),
+    ), patch(
+        "custom_components.ski_resort.coordinator.async_nws_alerts",
+        new=AsyncMock(return_value=[]),
+    ):
+        await coordinator.async_refresh()
+
+    assert coordinator.data[DATA_WEATHER] is None  # too stale -> unavailable
+
+
 async def test_total_failure_retries(hass: HomeAssistant):
     """If weather fails and there's no other source, setup retries."""
     entry, _ = await setup_area(hass, om_error=SkiResortConnectionError("down"))
