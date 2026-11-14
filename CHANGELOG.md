@@ -3,6 +3,19 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.4.5] - 2026-11-14
+
+### Changed
+- **The Open-Meteo "Snow depth" sensor is now "Modeled snow depth" and disabled
+  by default.** It reports a weather model's estimate of *natural* snow on the
+  ground at the resort's single coordinate (no snowmaking), which early season
+  is often ~0 and read as a contradiction next to the resort-reported
+  base/summit depth from snow-forecast.com. Renaming it makes the model-vs-
+  reported distinction clear, and it is off by default so the resort-reported
+  depths are what shows; a resort with no snow-forecast coverage can enable it
+  per-entity. Existing installs keep the entity enabled — disable it by hand if
+  you'd like it hidden.
+
 ## [1.4.4] - 2026-11-14
 
 ### Changed
