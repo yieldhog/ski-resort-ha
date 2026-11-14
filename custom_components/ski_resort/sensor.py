@@ -107,6 +107,11 @@ async def async_setup_entry(
             coordinator, "snow_depth", depth,
             lambda w: m_to_depth_display(w.get(WX_SNOW_DEPTH), imperial),
             icon="mdi:snowflake-variant", state_class=SensorStateClass.MEASUREMENT,
+            # Open-Meteo's modelled snowpack at the resort's single coordinate is
+            # often ~0 (natural snow only, no snowmaking) and reads as a
+            # contradiction next to the resort-reported base/summit depth. Off by
+            # default; a resort with no snow-forecast coverage can enable it.
+            enabled_default=False,
         ),
         SkiResortWeatherSensor(
             coordinator, "freezing_level", elev,
@@ -200,6 +205,7 @@ class SkiResortWeatherSensor(SkiResortEntity, SensorEntity):
         icon: str | None = None,
         device_class: SensorDeviceClass | None = None,
         state_class: SensorStateClass | None = None,
+        enabled_default: bool = True,
     ) -> None:
         """Initialize the weather sensor."""
         super().__init__(coordinator)
@@ -210,6 +216,7 @@ class SkiResortWeatherSensor(SkiResortEntity, SensorEntity):
         self._attr_icon = icon
         self._attr_device_class = device_class
         self._attr_state_class = state_class
+        self._attr_entity_registry_enabled_default = enabled_default
 
     @property
     def _weather(self) -> dict[str, Any] | None:

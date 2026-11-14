@@ -3,6 +3,27 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.4.4] - 2026-11-14
+
+### Changed
+- **Weather no longer drops to `unavailable` on a single failed poll.** When an
+  Open-Meteo fetch fails (e.g. a `ConnectTimeout` after the v1.4.3 retries are
+  exhausted), the last-good weather is now kept and served instead of blanking
+  the entity — the same way the reported-depth sensor already retains its last
+  reading. Because the default poll interval is 3 hours, one miss previously
+  meant up to 3 hours of `unavailable`. The stale reading is held for up to
+  3 consecutive failed polls (scaled by your configured scan interval), after
+  which the entity does go `unavailable` so a genuine outage still surfaces.
+- **The Open-Meteo "Snow depth" sensor is now "Modeled snow depth" and disabled
+  by default.** It reports a weather model's estimate of *natural* snow on the
+  ground at the resort's single coordinate (no snowmaking), which early season
+  is often ~0 and read as a contradiction next to the resort-reported
+  base/summit depth from snow-forecast.com. Renaming it makes the model-vs-
+  reported distinction clear, and it is off by default so the resort-reported
+  depths are what shows; a resort with no snow-forecast coverage can enable it
+  per-entity. Existing installs keep the entity enabled — disable it by hand if
+  you'd like it hidden.
+
 ## [1.4.3] - 2026-11-14
 
 ### Fixed

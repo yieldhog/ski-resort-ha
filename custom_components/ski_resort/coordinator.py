@@ -86,6 +86,12 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Keep serving the last-good weather across at most this many consecutive failed
+# polls before the entity goes unavailable. Scaled by the configured scan
+# interval (not a fixed wall-clock), so a longer poll interval doesn't blank the
+# entity during normal operation — the data is already one interval old by then.
+_WEATHER_STALE_GRACE_POLLS = 3
+
 
 class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     """Fetch and shape one ski area's weather, snow, and lift data."""
@@ -102,6 +108,10 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Throttled RapidAPI snow: last-good reading + when it was last attempted.
         self._snow: dict[str, Any] | None = None
         self._snow_at: datetime | None = None
+        # Last-good weather + when it was fetched, to ride over a transient
+        # Open-Meteo failure instead of blanking the entity for a whole poll.
+        self._weather: dict[str, Any] | None = None
+        self._weather_at: datetime | None = None
         minutes = entry.options.get(
             CONF_SCAN_INTERVAL_MINUTES, DEFAULT_SCAN_INTERVAL_MINUTES
         )
@@ -175,7 +185,29 @@ class SkiResortDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             if data[DATA_SNOW] is not None:
                 self._snow = data[DATA_SNOW]
 
+        if DATA_WEATHER in data and data[DATA_WEATHER] is not None:
+            self._weather = data[DATA_WEATHER]
+            self._weather_at = dt_util.utcnow()
+
         weather = data.get(DATA_WEATHER)
+        if (
+            weather is None
+            and self._weather is not None
+            and self._weather_at is not None
+            and self.update_interval is not None
+        ):
+            # Open-Meteo failed this poll. Keep showing the last-good weather
+            # rather than blanking the entity, but only for a few missed polls —
+            # a longer outage still surfaces as unavailable.
+            age = dt_util.utcnow() - self._weather_at
+            if age <= self.update_interval * _WEATHER_STALE_GRACE_POLLS:
+                weather = self._weather
+                _LOGGER.debug(
+                    "%s: Open-Meteo failed; serving last-good weather (%s old)",
+                    self.area.get("name"),
+                    age,
+                )
+
         snow = self._snow
         lifts = data.get(DATA_LIFTS)
         if weather is None and snow is None and lifts is None:
