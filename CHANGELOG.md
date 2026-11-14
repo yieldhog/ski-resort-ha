@@ -3,6 +3,18 @@
 All notable changes to this project are documented here. This project adheres
 to [Semantic Versioning](https://semver.org/).
 
+## [1.4.3] - 2026-11-14
+
+### Fixed
+- **Weather went unavailable on a brief network blip.** The HTTP helper retried
+  only retryable 5xx *status codes*; a transport failure (a timeout or a
+  dropped/reset connection — which Open-Meteo throws intermittently) raised on
+  the first try with no retry, so the weather entity dropped to `unavailable`
+  for that poll. Timeouts, connection resets, and an early connection close are
+  now retried with the same backoff as 5xx. The log message also keeps the
+  exception type (`err!r`), so a bare timeout no longer logs as `failed:` with
+  nothing after it. A bad URL or protocol misuse still fails fast.
+
 ## [1.4.2] - 2026-10-25
 
 ### Fixed
